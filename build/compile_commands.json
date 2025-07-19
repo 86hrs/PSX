@@ -1,0 +1,26 @@
+[
+{
+  "directory": "/Users/andreiataman/psx/build",
+  "command": "/usr/bin/c++   -std=gnu++20 -arch arm64 -Wall -Wextra -o CMakeFiles/psx.dir/src/main.cc.o -c /Users/andreiataman/psx/src/main.cc",
+  "file": "/Users/andreiataman/psx/src/main.cc",
+  "output": "CMakeFiles/psx.dir/src/main.cc.o"
+},
+{
+  "directory": "/Users/andreiataman/psx/build",
+  "command": "/usr/bin/c++   -std=gnu++20 -arch arm64 -Wall -Wextra -o CMakeFiles/psx.dir/src/cpu.cc.o -c /Users/andreiataman/psx/src/cpu.cc",
+  "file": "/Users/andreiataman/psx/src/cpu.cc",
+  "output": "CMakeFiles/psx.dir/src/cpu.cc.o"
+},
+{
+  "directory": "/Users/andreiataman/psx/build",
+  "command": "/usr/bin/c++   -std=gnu++20 -arch arm64 -Wall -Wextra -o CMakeFiles/psx.dir/src/bios.cc.o -c /Users/andreiataman/psx/src/bios.cc",
+  "file": "/Users/andreiataman/psx/src/bios.cc",
+  "output": "CMakeFiles/psx.dir/src/bios.cc.o"
+},
+{
+  "directory": "/Users/andreiataman/psx/build",
+  "command": "/usr/bin/c++   -std=gnu++20 -arch arm64 -Wall -Wextra -o CMakeFiles/psx.dir/src/interconnect.cc.o -c /Users/andreiataman/psx/src/interconnect.cc",
+  "file": "/Users/andreiataman/psx/src/interconnect.cc",
+  "output": "CMakeFiles/psx.dir/src/interconnect.cc.o"
+}
+]

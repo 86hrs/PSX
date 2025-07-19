@@ -1,0 +1,3 @@
+/Users/andreiataman/psx/build/CMakeFiles/psx.dir
+/Users/andreiataman/psx/build/CMakeFiles/edit_cache.dir
+/Users/andreiataman/psx/build/CMakeFiles/rebuild_cache.dir
