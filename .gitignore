@@ -1,6 +1,7 @@
 build/
 */build/
 .cache/
+.cache/*
 
 CMakeCache.txt
 CMakeFiles/
