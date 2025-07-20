@@ -26,6 +26,8 @@ struct Instruction {
     // Return register index in bits [25:21]
     uint32_t s() const { return (opcode >> 21) & 0x1f; }
 
+    uint32_t cop_opcode() const { return (opcode >> 21) & 0x1f; }
+
     // Return register index in bits [15:11]
     uint32_t d() const { return (opcode >> 11) & 0x1f; }
 
@@ -34,6 +36,9 @@ struct Instruction {
 
     // Shift Immediate values are stored in bits [10:6]
     uint32_t shift() const { return (opcode >> 6) & 0x1f; }
+
+    // Jump target stored in bits [25:0]
+    uint32_t imm_jump() const { return opcode & 0x3ffffff; }
 
     // Get raw opcode
     uint32_t raw() const { return opcode; }

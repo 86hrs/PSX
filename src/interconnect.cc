@@ -12,6 +12,17 @@ void Interconnect::store32(uint32_t p_addr, uint32_t p_val) {
     uint32_t addr = p_addr;
     assert(addr % 4 == 0 && "Unaligned store32 address");
 
+    // Ignore 0x1f801060, RAM_SIZE register and CACHE CONTROL REGISTER
+    switch (addr) {
+    case 0x1f801060:
+        return;
+    case 0xfffe0130:
+        std::cout << "LOG: CACHE CONTROL REGISTER\n";
+        return;
+    default:
+        break;
+    }
+
     std::optional<uint32_t> offset = map::MEM_CONTROL.contains(addr);
 
     if (offset.has_value()) {
@@ -41,7 +52,6 @@ void Interconnect::store32(uint32_t p_addr, uint32_t p_val) {
     }
     std::cerr << "ERROR: Unhandled store32 into address << " << std::hex << addr
               << "\n";
-    std::terminate();
 }
 uint32_t Interconnect::load32(uint32_t p_addr) {
     uint32_t addr = p_addr;
@@ -58,7 +68,7 @@ uint32_t Interconnect::load32(uint32_t p_addr) {
     if (offset.has_value())
         return this->bios->load32(offset.value());
     else
-        std::cerr << "ERROR: Unhandled fetch32 at address << " << std::hex << p_addr
-                  << "\n";
+        std::cerr << "ERROR: Unhandled fetch32 at address << " << std::hex
+                  << p_addr << "\n";
     return 0xdeadbeef;
 }

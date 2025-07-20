@@ -1,14 +1,14 @@
 #include "bios.h"
 #include "cpu.h"
 #include "interconnect.h"
-#include "map.h"
+#include <iostream>
 
 int main(void) {
-  Bios bios("SCPH1001.BIN");
-  Interconnect inter(&bios);
-  CPU cpu(&inter);
+    Bios bios("SCPH1001.BIN");
+    Interconnect inter(&bios);
+    CPU cpu(&inter);
 
-  cpu.run();
+    cpu.run();
 
-  return EXIT_SUCCESS;
+    return EXIT_SUCCESS;
 }

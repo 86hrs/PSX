@@ -211,6 +211,15 @@ CMAKE_TAPI:FILEPATH=/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeD
 CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 
 //Value Computed by CMake
+main_BINARY_DIR:STATIC=/Users/andreiataman/psx/build
+
+//Value Computed by CMake
+main_IS_TOP_LEVEL:STATIC=ON
+
+//Value Computed by CMake
+main_SOURCE_DIR:STATIC=/Users/andreiataman/psx
+
+//Value Computed by CMake
 psx_BINARY_DIR:STATIC=/Users/andreiataman/psx/build
 
 //Value Computed by CMake

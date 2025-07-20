@@ -20,8 +20,10 @@ KSEG2      LENGTH   Description
 struct CPU {
     uint32_t program_counter;
     uint32_t regs[32];
+    uint32_t status_register;
 
     Interconnect* inter;
+    Instruction next_instruction{0x0};
 
     CPU(Interconnect*);
     ~CPU() = default;
@@ -30,14 +32,22 @@ struct CPU {
     void increment_program_counter();
     void run_next_instruction();
     void decode_and_execute_instruction(Instruction);
-    uint32_t load32(uint32_t);
-    void store32(uint32_t, uint32_t);
-    uint32_t get_reg(uint32_t);
-    void set_reg(uint32_t, uint32_t);
+    void branch(uint32_t p_offset);
+    uint32_t load32(uint32_t addr);
+    void store32(uint32_t addr, uint32_t val);
+
+    uint32_t get_reg(uint32_t idx);
+    void set_reg(uint32_t idx, uint32_t val);
 
     void op_lui(Instruction);
     void op_ori(Instruction);
     void op_sw(Instruction);
     void op_sll(Instruction);
     void op_addiu(Instruction);
+    void op_jmp(Instruction);
+    void op_or(Instruction);
+    void op_cop0(Instruction);
+    void op_mtc0(Instruction);
+    void op_bne(Instruction);
+    void op_addi(Instruction);
 };
