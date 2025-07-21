@@ -20,6 +20,8 @@ add_executable(${PROJECT_NAME}
     src/interconnect.h
     src/interconnect.cc
     src/map.h
+    src/ram.h
+    src/ram.cc
 )
 
 target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra)

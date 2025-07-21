@@ -1,5 +1,6 @@
 #pragma once
 #include <cstdint>
+#include <tuple>
 #include "interconnect.h"
 #include "instruction.h"
 
@@ -22,6 +23,9 @@ struct CPU {
     uint32_t regs[32];
     uint32_t status_register;
 
+    uint32_t out_regs[32];
+    std::tuple<uint32_t, uint32_t> load;
+
     Interconnect* inter;
     Instruction next_instruction{0x0};
 
@@ -35,6 +39,7 @@ struct CPU {
     void branch(uint32_t p_offset);
     uint32_t load32(uint32_t addr);
     void store32(uint32_t addr, uint32_t val);
+    void store16(uint32_t addr, uint16_t val);
 
     uint32_t get_reg(uint32_t idx);
     void set_reg(uint32_t idx, uint32_t val);
@@ -42,6 +47,7 @@ struct CPU {
     void op_lui(Instruction);
     void op_ori(Instruction);
     void op_sw(Instruction);
+    void op_lw(Instruction);
     void op_sll(Instruction);
     void op_addiu(Instruction);
     void op_jmp(Instruction);
@@ -50,4 +56,5 @@ struct CPU {
     void op_mtc0(Instruction);
     void op_bne(Instruction);
     void op_addi(Instruction);
+    void op_sh(Instruction);
 };

@@ -16,6 +16,12 @@ CPU::CPU(Interconnect *p_inter) {
         reg = 0;
     }
 
+    for (uint32_t &out_reg : this->out_regs) {
+        out_reg = 0;
+    }
+
+    this->load = std::make_tuple(0, 0);
+
     this->set_reg(0, 0);
 }
 
@@ -25,24 +31,39 @@ void CPU::run_next_instruction() {
     uint32_t instruction_fetch = this->load32(this->program_counter);
     Instruction next_instruction(instruction_fetch);
     this->next_instruction = next_instruction;
-
     increment_program_counter();
+
+    uint32_t reg, val;
+    std::tie(reg, val) = this->load;
+    this->set_reg(reg, val);
+    std::get<0>(this->load) = 0;
+    std::get<1>(this->load) = 0;
+
     this->decode_and_execute_instruction(instruction);
+
+    std::copy(std::begin(this->out_regs), std::end(this->out_regs),
+              std::begin(this->regs));
 }
 
-void CPU::increment_program_counter() { this->program_counter += 4; }
+void CPU::increment_program_counter() {
+    this->program_counter = this->program_counter + 4;
+}
 
 uint32_t CPU::load32(uint32_t p_addr) { return this->inter->load32(p_addr); }
 
 void CPU::store32(uint32_t addr, uint32_t val) {
     this->inter->store32(addr, val);
 }
+void CPU::store16(uint32_t addr, uint16_t val) {
+    this->inter->store16(addr, val);
+}
 
 uint32_t CPU::get_reg(uint32_t idx) { return this->regs[idx]; }
+
 void CPU::set_reg(uint32_t idx, uint32_t val) {
-    this->regs[idx] = val;
+    this->out_regs[idx] = val;
     // $zero always zero
-    this->regs[0] = 0;
+    this->out_regs[0] = 0;
 }
 
 // Load Upper Immediate
@@ -79,6 +100,38 @@ void CPU::op_sw(Instruction p_instruction) {
     uint32_t v = this->get_reg(t);
 
     this->store32(addr, v);
+}
+// Store half word
+void CPU::op_sh(Instruction p_instruction) {
+    if ((this->status_register & 0x10000) != 0) {
+        std::cout << "LOG: Ignoring store while cache is isolated\n";
+        return;
+    }
+    uint32_t i = p_instruction.imm_se();
+    uint32_t t = p_instruction.t();
+    uint32_t s = p_instruction.s();
+
+    uint32_t addr = this->get_reg(s) + i;
+    uint32_t v = this->get_reg(t);
+
+    this->store16(addr, (uint16_t)v);
+}
+// Load Word
+void CPU::op_lw(Instruction p_instruction) {
+    if ((this->status_register & 0x10000) != 0) {
+        std::cout << "LOG: Ignoring load while cache is isolated\n";
+        return;
+    }
+    uint32_t i = p_instruction.imm_se();
+    uint32_t t = p_instruction.t();
+    uint32_t s = p_instruction.s();
+
+    uint32_t addr = this->get_reg(s) + i;
+
+    uint32_t v = this->load32(addr);
+
+    std::get<0>(this->load) = t;
+    std::get<1>(this->load) = v;
 }
 
 // Shift Left Logical
@@ -139,12 +192,30 @@ void CPU::op_mtc0(Instruction p_instruction) {
     uint32_t v = this->get_reg(cpu_r);
 
     switch (cop_r) {
+    case 3:
+    case 5:
+    case 6:
+    case 7:
+    case 9:
+    case 11:
+        // Breakpoints registers
+        if (v != 0) {
+            throw std::runtime_error("Unhandled write to cop0r" +
+                                     std::to_string(cop_r));
+        }
+        break;
     case 12:
         this->status_register = v;
         break;
+    case 13:
+        // Cause register
+        if (v != 0) {
+            throw std::runtime_error("Unhandled write to CAUSE register.");
+        }
+        break;
     default:
-        std::cout << "Error: Unhandled cop0 register";
-        std::terminate();
+        throw std::runtime_error("Unhandled cop0 register " +
+                                 std::to_string(cop_r));
     }
 }
 void CPU::op_bne(Instruction p_instruction) {
@@ -162,12 +233,12 @@ void CPU::op_addi(Instruction instruction) {
     uint32_t t = instruction.t();
     uint32_t s = instruction.s();
     int32_t s_val = static_cast<int32_t>(this->get_reg(s));
-    
+
     int32_t result;
     if (__builtin_add_overflow(s_val, i, &result)) {
         throw std::overflow_error("ADDI overflow");
     }
-   this->set_reg(t, static_cast<uint32_t>(result));
+    this->set_reg(t, static_cast<uint32_t>(result));
 }
 
 void CPU::branch(uint32_t p_offset) {
@@ -228,6 +299,14 @@ void CPU::decode_and_execute_instruction(Instruction p_instruction) {
     }
     case 0b001000: {
         this->op_addi(p_instruction);
+        break;
+    }
+    case 0b100011: {
+        this->op_lw(p_instruction);
+        break;
+    }
+    case 0b101001: {
+        this->op_sh(p_instruction);
         break;
     }
     default:

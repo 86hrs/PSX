@@ -1,11 +1,12 @@
 #include "bios.h"
 #include "cpu.h"
 #include "interconnect.h"
-#include <iostream>
+#include "ram.h"
 
 int main(void) {
     Bios bios("SCPH1001.BIN");
-    Interconnect inter(&bios);
+    RAM ram;
+    Interconnect inter(&bios, &ram);
     CPU cpu(&inter);
 
     cpu.run();
