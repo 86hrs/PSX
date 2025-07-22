@@ -11,6 +11,7 @@ CPU::CPU(Interconnect *p_inter) {
     this->program_counter = 0xbfc00000;
     this->inter = p_inter;
     this->status_register = 0;
+    this->next_instruction = Instruction(0);
 
     for (uint32_t &reg : this->regs) {
         reg = 0;
@@ -28,9 +29,7 @@ CPU::CPU(Interconnect *p_inter) {
 
 void CPU::run_next_instruction() {
     Instruction instruction = this->next_instruction;
-
-    Instruction ni(this->load32(this->program_counter));
-    this->next_instruction = ni;
+    this->next_instruction = Instruction(this->load32(this->program_counter));
 
     this->set_reg(load_reg, load_val);
     this->load_reg = 0;
@@ -245,7 +244,7 @@ void CPU::op_stlu(Instruction p_instruction) {
     this->set_reg(d, v);    
 }
 
-void CPU::branch(uint32_t offset) { this->program_counter += (offset << 2); }
+void CPU::branch(uint32_t offset) { this->program_counter += (offset << 2) + 4; }
 
 void CPU::decode_and_execute_instruction(Instruction p_instruction) {
     this->advance_program_counter = true;
@@ -265,7 +264,6 @@ void CPU::decode_and_execute_instruction(Instruction p_instruction) {
             break;
         }
         default:
-            std::cout << std::hex << this->program_counter << std::endl;
             std::cout << "Unimplemented: " << std::hex
                       << p_instruction.subfunction() << std::endl;
             std::terminate();
@@ -311,10 +309,10 @@ void CPU::decode_and_execute_instruction(Instruction p_instruction) {
         this->op_lw(p_instruction);
         break;
     }
-    // case 0b101001: {
-    //     this->op_sh(p_instruction);
-    //     break;
-    // }
+    case 0b101001: {
+        this->op_sh(p_instruction);
+        break;
+    }
     default:
         std::cout << "Unhandled instruction << " << std::hex
                   << p_instruction.opcode << "\n";

@@ -29,7 +29,7 @@ struct CPU {
     uint32_t load_reg, load_val;
 
     Interconnect* inter;
-    Instruction next_instruction{0x0};
+    Instruction next_instruction{0};
 
     CPU(Interconnect*);
     ~CPU() = default;
