@@ -1,6 +1,5 @@
 #pragma once
 #include <cstdint>
-#include <tuple>
 #include "interconnect.h"
 #include "instruction.h"
 
@@ -23,8 +22,11 @@ struct CPU {
     uint32_t regs[32];
     uint32_t status_register;
 
+    int opcode_count;
+    bool advance_program_counter = true;
+
     uint32_t out_regs[32];
-    std::tuple<uint32_t, uint32_t> load;
+    uint32_t load_reg, load_val;
 
     Interconnect* inter;
     Instruction next_instruction{0x0};
@@ -33,7 +35,7 @@ struct CPU {
     ~CPU() = default;
 
     void run();
-    void increment_program_counter();
+    void print();
     void run_next_instruction();
     void decode_and_execute_instruction(Instruction);
     void branch(uint32_t p_offset);
@@ -57,4 +59,5 @@ struct CPU {
     void op_bne(Instruction);
     void op_addi(Instruction);
     void op_sh(Instruction);
+    void op_stlu(Instruction);
 };

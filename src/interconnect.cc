@@ -39,8 +39,18 @@ void Interconnect::store32(uint32_t p_addr, uint32_t p_val) {
         this->ram->store32(offset.value(), p_val);
         return;
     }
+    if (auto offset = map::RAM_KSEG0.contains(addr); offset.has_value()) {
+        this->ram->store32(offset.value() & 0x1FFFFFFF,
+                           p_val); // Strip KSEG0 bit
+        return;
+    }
+    if (auto offset = map::RAM_KSEG1.contains(addr); offset.has_value()) {
+        this->ram->store32(offset.value() & 0x1FFFFFFF,
+                           p_val); // Strip KSEG1 bit
+        return;
+    }
 
-    // MEM_CONTROL (SYS_CONTROL)
+    // MEM_CONTROL
     if (auto offset = map::MEM_CONTROL.contains(addr); offset.has_value()) {
         switch (offset.value()) {
         case 0: // Expansion 1 base
@@ -65,18 +75,17 @@ void Interconnect::store32(uint32_t p_addr, uint32_t p_val) {
         return;
     }
 
-    std::cerr << "Unhandled store32 to address 0x" << std::hex << addr << "\n";
+    std::cout << "Unhandled store32 to address 0x" << std::hex << addr << "\n";
 }
 
 uint32_t Interconnect::load32(uint32_t p_addr) {
     uint32_t addr = mask_region(p_addr);
-    assert(addr % 4 == 0 && "Unaligned load32 address");
 
+    assert(addr % 4 == 0 && "Unaligned load32 address");
     // RAM
     if (auto offset = map::RAM.contains(addr); offset.has_value()) {
         return ram->load32(offset.value());
     }
-
     // BIOS
     if (auto offset = map::BIOS.contains(addr); offset.has_value()) {
         return bios->load32(offset.value());

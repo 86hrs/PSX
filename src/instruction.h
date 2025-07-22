@@ -20,7 +20,7 @@ struct Instruction {
     // value
     uint32_t imm_se() const {
         int16_t v = (int16_t)(opcode & 0xffff); // Signed 16-bit value
-        return (uint32_t)(int32_t)v;            // Sign-extend to 32 bits first
+        return (uint32_t)(int32_t)v;                      // Sign-extend to 32 bits
     }
 
     // Return register index in bits [25:21]
@@ -38,7 +38,7 @@ struct Instruction {
     uint32_t shift() const { return (opcode >> 6) & 0x1f; }
 
     // Jump target stored in bits [25:0]
-    uint32_t imm_jump() const { return opcode & 0x3ffffff; }
+    uint32_t imm_jump() { return opcode & 0x3ffffff; }
 
     // Get raw opcode
     uint32_t raw() const { return opcode; }

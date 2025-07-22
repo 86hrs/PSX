@@ -1,10 +1,10 @@
 #include "ram.h"
-
+#include <iostream>
 
 RAM::RAM() {
-    this->data.resize(2 * 1024 * 1024);    
-    for(auto& d : data)
-        d = 0xca;
+    for (auto &d : data) {
+        d = 0x0;
+    }
 }
 
 uint32_t RAM::load32(uint32_t p_offset) {
@@ -19,12 +19,13 @@ uint32_t RAM::load32(uint32_t p_offset) {
 }
 
 void RAM::store32(uint32_t offset, uint32_t value) {
-    uint8_t b0 = value;
-    uint8_t b1 = (uint8_t)(value >> 8);
-    uint8_t b2 = (uint8_t)(value >> 16);
-    uint8_t b3 = (uint8_t)(value >> 24);
-    this->data[offset + 0] = b0;
-    this->data[offset + 1] = b1;
-    this->data[offset + 2] = b2;
-    this->data[offset + 3] = b3;
+    // Split into bytes (little-endian)
+    this->data[offset + 0] = value & 0xFF; // LSB
+    this->data[offset + 1] = (value >> 8) & 0xFF;
+    this->data[offset + 2] = (value >> 16) & 0xFF;
+    this->data[offset + 3] = (value >> 24) & 0xFF; // MSB
+
+    // Debug output (optional)
+    std::cout << "RAM::store32: Wrote 0x" << std::hex << value << " to 0x"
+              << offset << "\n";
 }

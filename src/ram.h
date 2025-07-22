@@ -1,9 +1,9 @@
 #pragma once
-#include <vector>
+#include <cstdint>
 
 struct RAM {
   // RAM BUFFER
-  std::vector<uint8_t> data;
+  uint8_t data[2*1024*1024];
 
   RAM();
   ~RAM() = default;
