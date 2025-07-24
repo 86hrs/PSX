@@ -17,6 +17,7 @@ struct Interconnect {
         0xffffffff,
         0xffffffff,
     };
+
     Bios *bios;
     RAM *ram;
 
@@ -24,7 +25,10 @@ struct Interconnect {
     ~Interconnect() = default;
 
     uint32_t load32(uint32_t);
+    uint8_t load8(uint32_t);
+
     void store32(uint32_t, uint32_t);
     void store16(uint32_t, uint16_t);
+    void store8(uint32_t, uint8_t);
     uint32_t mask_region(uint32_t addr);
 };

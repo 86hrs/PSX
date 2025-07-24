@@ -10,4 +10,5 @@ struct Bios {
   ~Bios() = default;
 
   uint32_t load32(uint32_t);
+  uint8_t load8(uint32_t);
 };

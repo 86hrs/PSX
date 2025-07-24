@@ -19,29 +19,47 @@ KSEG2      LENGTH   Description
 
 struct CPU {
     uint32_t program_counter;
+    uint32_t next_program_counter;
+    uint32_t current_program_counter;
     uint32_t regs[32];
     uint32_t status_register;
+    uint32_t cause_register;
+    uint32_t epc_register;
 
-    int opcode_count;
-    bool advance_program_counter = true;
+    long long opcode_count;
 
     uint32_t out_regs[32];
     uint32_t load_reg, load_val;
 
-    Interconnect* inter;
-    Instruction next_instruction{0};
+    Interconnect *inter;
 
-    CPU(Interconnect*);
+    CPU(Interconnect *);
     ~CPU() = default;
+
+    enum Exception : uint32_t {
+        SysCall = 0x8,
+        ArithmeticOverflow = 0xc,
+        /// Address error on load
+        LoadAddressError = 0x4,
+        /// Address error on store
+        StoreAddressError = 0x5,
+    };
 
     void run();
     void print();
     void run_next_instruction();
     void decode_and_execute_instruction(Instruction);
+
+    void exception(Exception);
+
     void branch(uint32_t p_offset);
+
     uint32_t load32(uint32_t addr);
+    uint8_t load8(uint32_t addr);
+
     void store32(uint32_t addr, uint32_t val);
     void store16(uint32_t addr, uint16_t val);
+    void store8(uint32_t addr, uint8_t val);
 
     uint32_t get_reg(uint32_t idx);
     void set_reg(uint32_t idx, uint32_t val);
@@ -56,8 +74,18 @@ struct CPU {
     void op_or(Instruction);
     void op_cop0(Instruction);
     void op_mtc0(Instruction);
+    void op_mfc0(Instruction);
     void op_bne(Instruction);
     void op_addi(Instruction);
     void op_sh(Instruction);
     void op_stlu(Instruction);
+    void op_addu(Instruction);
+    void op_jal(Instruction);
+    void op_andi(Instruction);
+    void op_sb(Instruction);
+    void op_jr(Instruction);
+    void op_lb(Instruction);
+    void op_beq(Instruction);
+    void op_and(Instruction);
+    void op_syscall(Instruction);
 };

@@ -25,7 +25,16 @@ void RAM::store32(uint32_t offset, uint32_t value) {
     this->data[offset + 2] = (value >> 16) & 0xFF;
     this->data[offset + 3] = (value >> 24) & 0xFF; // MSB
 
-    // Debug output (optional)
-    std::cout << "RAM::store32: Wrote 0x" << std::hex << value << " to 0x"
-              << offset << "\n";
+    std::cout << "RAM::store32: Wrote 0x" << std::hex << value
+              << " to 0x" << offset << "\n";
+}
+
+uint8_t RAM::load8(uint32_t p_offset) {
+    return this->data[p_offset];
+}
+
+void RAM::store8(uint32_t p_offset, uint8_t p_value) {
+    this->data[p_offset] = p_value;
+    std::cout << "RAM::store8: Wrote 0x" << p_value << " to 0x"
+              << p_offset << "\n";
 }

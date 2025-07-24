@@ -4,7 +4,7 @@
 struct Instruction {
     uint32_t opcode;
 
-    explicit Instruction(uint32_t opcode) : opcode(opcode) {}
+    explicit Instruction(uint32_t opcode = 0x0) : opcode(opcode) {}
     ~Instruction() = default;
 
     // Return bits [31:26] of the instruction
