@@ -2,6 +2,7 @@
 #include <arm/types.h>
 #include <cstdint>
 #include <fstream>
+#include <iostream>
 
 Bios::Bios(const char *filename) {
     std::ifstream ifs(filename,
@@ -32,15 +33,14 @@ Bios::Bios(const char *filename) {
 }
 
 uint32_t Bios::load32(uint32_t p_offset) {
-    uint64_t offset = (uint64_t)p_offset;
-
-    uint32_t b0 = this->data[offset + 0];
-    uint32_t b1 = this->data[offset + 1];
-    uint32_t b2 = this->data[offset + 2];
-    uint32_t b3 = this->data[offset + 3];
+    uint32_t b0 = this->data[p_offset + 0];
+    uint32_t b1 = this->data[p_offset + 1];
+    uint32_t b2 = this->data[p_offset + 2];
+    uint32_t b3 = this->data[p_offset + 3];
 
     return b0 | (b1 << 8) | (b2 << 16) | (b3 << 24);
 }
+
 
 uint8_t Bios::load8(uint32_t p_offset) {
     return this->data[p_offset];

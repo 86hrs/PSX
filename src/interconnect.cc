@@ -109,12 +109,12 @@ void Interconnect::store32(uint32_t p_addr, uint32_t p_val) {
 
 uint32_t Interconnect::load32(uint32_t p_addr) {
     uint32_t addr = mask_region(p_addr);
-
     // EXPANSION 1
     if (auto offset = map::EXPANSION_1.contains(p_addr);
         offset.has_value()) {
-        return 0xFF;
+        return 0xdeadbeef;
     }
+
     // RAM
     if (auto offset = map::RAM.contains(addr);
         offset.has_value()) {

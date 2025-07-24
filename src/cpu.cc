@@ -30,23 +30,27 @@ CPU::CPU(Interconnect *p_inter) {
 }
 
 void CPU::run_next_instruction() {
-    this->program_counter = this->next_program_counter;
-    if (this->program_counter % 4 != 0) {
+    uint32_t pc = this->program_counter;
+
+    if (pc % 4 != 0) {
         this->exception(Exception::LoadAddressError);
         return;
     }
 
-    Instruction instruction =
-        Instruction(this->load32(this->program_counter));
-    this->current_program_counter = this->program_counter;
+    Instruction instruction = Instruction(this->load32(pc));
+
+    this->decode_and_execute_instruction(instruction);
+
+    std::cout << "[TRACE] PC: 0x" << std::hex << pc
+              << " | Instr: 0x" << instruction.opcode << "\n";
 
     this->set_reg(load_reg, load_val);
     this->load_reg = 0;
     this->load_val = 0;
 
-    this->decode_and_execute_instruction(instruction);
-
-    this->next_program_counter = this->program_counter + 4;
+    this->current_program_counter = this->program_counter;
+    this->program_counter = this->next_program_counter;
+    this->next_program_counter += 4;
 
     this->opcode_count += 1;
 
@@ -101,9 +105,9 @@ void CPU::op_ori(Instruction p_instruction) {
 
 // Store Word
 void CPU::op_sw(Instruction p_instruction) {
-
     if ((this->status_register & 0x10000) != 0) {
-        std::cout << program_counter << std::endl;
+        // std::cout << "SW LOG: Ignoring store while cache is "
+        //              "isolated\n";
         return;
     }
 
@@ -206,13 +210,16 @@ void CPU::op_addiu(Instruction p_instruction) {
 void CPU::op_jmp(Instruction p_instruction) {
     uint32_t i = p_instruction.imm_jump();
     this->next_program_counter =
-        (this->current_program_counter & 0xf0000000) | (i << 2);
+        (this->program_counter & 0xf0000000) | (i << 2);
 }
 
 void CPU::op_jal(Instruction p_instruction) {
-    uint32_t return_address = this->next_program_counter;
-    this->set_reg(31, return_address);
+    this->set_reg(31, this->next_program_counter);
     this->op_jmp(p_instruction);
+}
+
+void CPU::op_jr(Instruction p_instruction) {
+    this->program_counter = this->get_reg(p_instruction.s());
 }
 
 void CPU::op_or(Instruction p_instruction) {
@@ -363,10 +370,7 @@ void CPU::op_andi(Instruction p_instruction) {
     uint32_t v = this->get_reg(s) & i;
     this->set_reg(t, v);
 }
-void CPU::op_jr(Instruction p_instruction) {
-    uint32_t s = p_instruction.s();
-    this->program_counter = this->get_reg(s);
-}
+
 void CPU::op_and(Instruction p_instruction) {
     uint32_t d = p_instruction.d();
     uint32_t s = p_instruction.s();
@@ -378,7 +382,8 @@ void CPU::op_and(Instruction p_instruction) {
 }
 
 void CPU::branch(uint32_t offset) {
-    this->next_program_counter += (offset << 2);
+    this->program_counter =
+        this->program_counter + (offset << 2);
 }
 
 void CPU::exception(Exception cause) {
@@ -443,7 +448,7 @@ void CPU::decode_and_execute_instruction(
             std::cout << "Opcodes computed: " << std::dec
                       << this->opcode_count << "\n";
             std::cout << "PC: " << std::hex
-                      << this->program_counter << "\n";
+                      << this->current_program_counter << "\n";
             std::terminate();
             break;
         };
