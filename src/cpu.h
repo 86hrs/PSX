@@ -28,6 +28,9 @@ struct CPU {
 
     long long opcode_count;
 
+    bool branch_occured = false;
+    bool delay_slot = false;
+
     uint32_t out_regs[32];
     uint32_t load_reg, load_val;
 
@@ -43,12 +46,13 @@ struct CPU {
         LoadAddressError = 0x4,
         /// Address error on store
         StoreAddressError = 0x5,
+        IllegalInstruction = 0xa,
     };
 
     void run();
     void print();
     void run_next_instruction();
-    void decode_and_execute_instruction(Instruction);
+    void execute_instruction(Instruction);
 
     void exception(Exception);
 
@@ -88,4 +92,5 @@ struct CPU {
     void op_beq(Instruction);
     void op_and(Instruction);
     void op_syscall(Instruction);
+    void op_jalr(Instruction);
 };
