@@ -93,4 +93,8 @@ struct CPU {
     void op_and(Instruction);
     void op_syscall(Instruction);
     void op_jalr(Instruction);
+    void op_add(Instruction);
+    void op_bgtz(Instruction);
+    void op_blez(Instruction);
+    void op_lbu(Instruction);
 };

@@ -1,7 +1,6 @@
 #include "interconnect.h"
 #include "bios.h"
 #include "map.h"
-#include <cassert>
 #include <cstdint>
 #include <iostream>
 #include <optional>
@@ -19,7 +18,6 @@ void Interconnect::store16(uint32_t p_addr, uint16_t p_val) {
     (void)p_val;
 
     uint32_t addr = mask_region(p_addr);
-    assert(addr % 2 == 0 && "Unaligned store16 address");
 
     // SPU Registers
     if (auto offset = map::SPU.contains(addr);
@@ -59,7 +57,6 @@ void Interconnect::store8(uint32_t p_addr, uint8_t p_val) {
 
 void Interconnect::store32(uint32_t p_addr, uint32_t p_val) {
     uint32_t addr = mask_region(p_addr);
-    assert(addr % 4 == 0 && "Unaligned store32 address");
 
     if (addr == 0x1f801060)
         return;               // RAM_SIZE (ignored)
@@ -137,12 +134,12 @@ uint8_t Interconnect::load8(uint32_t p_addr) {
     // BIOS
     if (auto offset = map::BIOS.contains(addr);
         offset.has_value()) {
-        return this->bios->load8(addr);
+        return this->bios->load8(*offset);
     }
     // RAM
     if (auto offset = map::RAM.contains(addr);
         offset.has_value()) {
-        return this->ram->load8(addr);
+        return this->ram->load8(*offset);
     }
     std::cout << "Unhandled load8 from address: 0x" << std::hex
               << addr << "\n";
