@@ -1,5 +1,5 @@
 #include "ram.h"
-#include <iostream>
+#include <cstdint>
 
 RAM::RAM() {
     for (auto &d : data) {
@@ -24,9 +24,6 @@ void RAM::store32(uint32_t offset, uint32_t value) {
     this->data[offset + 1] = (value >> 8) & 0xFF;
     this->data[offset + 2] = (value >> 16) & 0xFF;
     this->data[offset + 3] = (value >> 24) & 0xFF; // MSB
-
-    std::cout << "RAM::store32: Wrote 0x" << std::hex << value
-              << " to 0x" << offset << "\n";
 }
 
 uint8_t RAM::load8(uint32_t p_offset) {
@@ -35,6 +32,19 @@ uint8_t RAM::load8(uint32_t p_offset) {
 
 void RAM::store8(uint32_t p_offset, uint8_t p_value) {
     this->data[p_offset] = p_value;
-    std::cout << "RAM::store8: Wrote 0x" << p_value << " to 0x"
-              << p_offset << "\n";
+}
+
+void RAM::store16(uint32_t p_offset, uint16_t p_value) {
+    uint8_t b0 = (uint8_t)p_value;
+    uint8_t b1 = (uint8_t)(p_value >> 8);
+
+    this->data[p_offset + 0] = b0;
+    this->data[p_offset + 1] = b1;
+}
+
+uint16_t RAM::load16(uint32_t p_offset) {
+    uint16_t b0 = (uint16_t)this->data[p_offset + 0];
+    uint16_t b1 = (uint16_t)this->data[p_offset + 1];
+
+    return b0 | (b1 << 8);
 }

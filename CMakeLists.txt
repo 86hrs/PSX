@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(psx VERSION 1.0.0 LANGUAGES CXX)
+project(psx VERSION 1.0.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -22,6 +22,17 @@ add_executable(${PROJECT_NAME}
     src/map.h
     src/ram.h
     src/ram.cc
+    src/dma.h
+    src/dma.cc
+    src/r3000d.h
+    src/r3000d.c
 )
 
-target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra)
+set_target_properties(${PROJECT_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+target_compile_options(${PROJECT_NAME} PRIVATE
+    -O3
+    -march=native
+    -flto
+    -fno-rtti             # If you don’t use dynamic_cast or typeid
+)
+

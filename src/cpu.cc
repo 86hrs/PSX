@@ -1,11 +1,12 @@
-
 #include "cpu.h"
 #include "instruction.h"
 #include "interconnect.h"
 #include <cstdint>
 #include <cstdlib>
 #include <exception>
-#include <iostream>
+#include "r3000d.h"
+
+char buf[1024];
 
 CPU::CPU(Interconnect *p_inter) {
     this->program_counter = 0xbfc00000;
@@ -13,8 +14,8 @@ CPU::CPU(Interconnect *p_inter) {
     this->inter = p_inter;
     this->status_register = 0;
     this->opcode_count = 0;
-    this->branch_occured = false;
-    this->delay_slot = false;
+    this->branch_occured = this->delay_slot = false;
+    this->hi = this->lo = 0xdeadbeef;
 
     for (uint32_t &reg : this->regs) {
         reg = 0;
@@ -59,14 +60,18 @@ void CPU::run_next_instruction() {
     std::copy(std::begin(this->out_regs),
               std::end(this->out_regs), std::begin(this->regs));
 
-    std::cout << "[TRACE] PC: 0x" << std::hex << pc
-              << " | Instr: 0x" << instruction.opcode << "\n";
+    r3000d_disassemble(buf, instruction.opcode, NULL);
+
+    // printf("%X : %s\n", this->current_program_counter, buf);
 
     this->opcode_count += 1;
 }
 
 uint32_t CPU::load32(uint32_t p_addr) {
     return this->inter->load32(p_addr);
+}
+uint16_t CPU::load16(uint32_t p_addr) {
+    return this->inter->load16(p_addr);
 }
 uint8_t CPU::load8(uint32_t p_addr) {
     return this->inter->load8(p_addr);
@@ -113,8 +118,6 @@ void CPU::op_ori(Instruction p_instruction) {
 // Store Word
 void CPU::op_sw(Instruction p_instruction) {
     if ((this->status_register & 0x10000) != 0) {
-        std::cout << "SW LOG: Ignoring store while cache is "
-                     "isolated\n";
         return;
     }
 
@@ -132,11 +135,78 @@ void CPU::op_sw(Instruction p_instruction) {
         this->exception(Exception::StoreAddressError);
     }
 }
+void CPU::op_swl(Instruction p_instruction) {
+    uint32_t i = p_instruction.imm_se();
+    uint32_t t = p_instruction.t();
+    uint32_t s = p_instruction.s();
+
+    uint32_t addr = this->get_reg(s) + i;
+
+    uint32_t v = this->get_reg(t);
+
+    uint32_t aligned_addr = addr & !3;
+    uint32_t cur_mem = this->load32(aligned_addr);
+
+    uint32_t mem = (uint32_t)NULL;
+
+    switch (addr & 3) {
+    case 0: {
+        mem = (cur_mem & 0xffffff00) | (v >> 24);
+        break;
+    }
+    case 1: {
+        mem = (cur_mem & 0xffff0000) | (v >> 16);
+        break;
+    }
+    case 2: {
+        mem = (cur_mem & 0xff000000) | (v >> 8);
+        break;
+    }
+    case 3: {
+        mem = (cur_mem & 0x00000000) | (v >> 0);
+        break;
+    }
+    }
+    this->store32(aligned_addr, mem);
+}
+void CPU::op_swr(Instruction p_instruction) {
+
+    uint32_t i = p_instruction.imm_se();
+    uint32_t t = p_instruction.t();
+    uint32_t s = p_instruction.s();
+
+    uint32_t addr = this->get_reg(s) + i;
+
+    uint32_t v = this->get_reg(t);
+
+    uint32_t aligned_addr = addr & !3;
+    uint32_t cur_mem = this->load32(aligned_addr);
+
+    uint32_t mem = (uint32_t)NULL;
+
+    switch (addr & 3) {
+    case 0: {
+        mem = (cur_mem & 0x00000000) | (v << 0);
+        break;
+    }
+    case 1: {
+        mem = (cur_mem & 0x000000ff) | (v << 8);
+        break;
+    }
+    case 2: {
+        mem = (cur_mem & 0x0000ffff) | (v << 16);
+        break;
+    }
+    case 3: {
+        mem = (cur_mem & 0x00ffffff) | (v << 24);
+        break;
+    }
+    }
+    this->store32(aligned_addr, mem);
+}
 // Store half word
 void CPU::op_sh(Instruction p_instruction) {
     if ((this->status_register & 0x10000) != 0) {
-        std::cout << "SH LOG: Ignoring store while cache is "
-                     "isolated\n";
         return;
     }
     uint32_t i = p_instruction.imm_se();
@@ -155,8 +225,6 @@ void CPU::op_sh(Instruction p_instruction) {
 // Store byte
 void CPU::op_sb(Instruction p_instruction) {
     if ((this->status_register & 0x10000) != 0) {
-        std::cout << "SB LOG: Ignoring store while cache is "
-                     "isolated\n";
         return;
     }
 
@@ -172,8 +240,6 @@ void CPU::op_sb(Instruction p_instruction) {
 // Load Word
 void CPU::op_lw(Instruction p_instruction) {
     if ((this->status_register & 0x10000) != 0) {
-        std::cout
-            << "LW LOG: Ignoring load while cache is isolated\n";
         return;
     }
     uint32_t i = p_instruction.imm_se();
@@ -191,6 +257,115 @@ void CPU::op_lw(Instruction p_instruction) {
     } else {
         this->exception(Exception::LoadAddressError);
     }
+}
+void CPU::op_lwl(Instruction p_instruction) {
+    uint32_t i = p_instruction.imm_se();
+    uint32_t t = p_instruction.t();
+    uint32_t s = p_instruction.s();
+
+    uint32_t addr = this->get_reg(s) + i;
+
+    // This instruction bypasses the load delay restriction: this
+    // instruction will merge the new contents with value
+    // currently being loaded if need be
+
+    uint32_t cur_v = this->out_regs[t];
+
+    uint32_t aligned_addr = addr & !3;
+    uint32_t aligned_word = this->load32(aligned_addr);
+
+    uint32_t v = (uint32_t)NULL;
+
+    switch (addr & 3) {
+    case 0: {
+        v = (cur_v & 0x00ffffff) | (aligned_word << 24);
+        break;
+    }
+    case 1: {
+        v = (cur_v & 0x0000ffff) | (aligned_word << 16);
+        break;
+    }
+    case 2: {
+        v = (cur_v & 0x000000ff) | (aligned_word << 8);
+        break;
+    }
+    case 3: {
+        v = (cur_v & 0x00000000) | (aligned_word << 0);
+        break;
+    }
+    }
+    this->load_reg = t;
+    this->load_val = v;
+}
+void CPU::op_lwr(Instruction p_instruction) {
+    uint32_t i = p_instruction.imm_se();
+    uint32_t t = p_instruction.t();
+    uint32_t s = p_instruction.s();
+
+    uint32_t addr = this->get_reg(s) + i;
+
+    // This instruction bypasses the load delay restriction: this
+    // instruction will merge the new contents with value
+    // currently being loaded if need be
+
+    uint32_t cur_v = this->out_regs[t];
+
+    uint32_t aligned_addr = addr & !3;
+    uint32_t aligned_word = this->load32(aligned_addr);
+
+    uint32_t v = (uint32_t)NULL;
+
+    switch (addr & 3) {
+    case 3: {
+        v = (cur_v & 0xffffff00) | (aligned_word << 24);
+        break;
+    }
+    case 2: {
+        v = (cur_v & 0xffff0000) | (aligned_word << 16);
+        break;
+    }
+    case 1: {
+        v = (cur_v & 0xff000000) | (aligned_word << 8);
+        break;
+    }
+    case 0: {
+        v = (cur_v & 0x00000000) | (aligned_word << 0);
+        break;
+    }
+    }
+    this->load_reg = t;
+    this->load_val = v;
+}
+// Load half word unsigned
+void CPU::op_lhu(Instruction p_instruction) {
+    uint32_t i = p_instruction.imm_se();
+    uint32_t t = p_instruction.t();
+    uint32_t s = p_instruction.s();
+
+    uint32_t addr = this->get_reg(s) + i;
+
+    if (addr % 2 != 0) {
+        this->exception(Exception::LoadAddressError);
+        return;
+    }
+
+    uint32_t v = (uint32_t)this->load16(addr);
+    this->load_reg = t;
+    this->load_val = v;
+}
+
+void CPU::op_lh(Instruction p_instruction) {
+    uint32_t i = p_instruction.imm_se();
+    uint32_t t = p_instruction.t();
+    uint32_t s = p_instruction.s();
+
+    uint32_t addr = this->get_reg(s) + i;
+
+    // Cast to i16
+    int16_t v = (int16_t)this->load16(addr);
+
+    this->load_reg = t;
+    this->load_val = (uint32_t)v;
 }
 // Load byte
 void CPU::op_lb(Instruction p_instruction) {
@@ -231,6 +406,62 @@ void CPU::op_sll(Instruction p_instruction) {
     this->set_reg(d, v);
 }
 
+// Shift Left Logical Variable
+void CPU::op_sllv(Instruction p_instruction) {
+    uint32_t d = p_instruction.d();
+    uint32_t s = p_instruction.s();
+    uint32_t t = p_instruction.t();
+
+    // Shift amount is truncated to 5 bits
+    uint32_t v = this->get_reg(t) << (this->get_reg(s) & 0x1f);
+
+    this->set_reg(d, v);
+}
+
+void CPU::op_sra(Instruction p_instruction) {
+    uint32_t i = p_instruction.shift();
+    uint32_t d = p_instruction.d();
+    uint32_t t = p_instruction.t();
+
+    uint32_t v = (int32_t)this->get_reg(t) >> i;
+    this->set_reg(d, (uint32_t)v);
+}
+
+void CPU::op_srav(Instruction p_instruction) {
+    uint32_t d = p_instruction.d();
+    uint32_t s = p_instruction.s();
+    uint32_t t = p_instruction.t();
+
+    // Shift amount is truncated to 5 bits
+    int32_t value = (int32_t)(get_reg(t));
+    uint32_t shift_amount = get_reg(s) & 0x1F;
+    int32_t result = value >> shift_amount;
+
+    set_reg(d, (uint32_t)(result));
+}
+
+void CPU::op_srl(Instruction p_instruction) {
+    uint32_t i = p_instruction.shift();
+    uint32_t t = p_instruction.t();
+    uint32_t d = p_instruction.d();
+
+    uint32_t v = this->get_reg(t) >> i;
+
+    this->set_reg(d, v);
+}
+
+void CPU::op_srlv(Instruction p_instruction) {
+    uint32_t d = p_instruction.d();
+    uint32_t s = p_instruction.s();
+    uint32_t t = p_instruction.t();
+
+    // Shift amount is truncated to 5 bits
+    uint32_t shift_amount = this->get_reg(s) & 0x1F;
+    uint32_t v = this->get_reg(t) >> shift_amount;
+
+    this->set_reg(d, v);
+}
+
 void CPU::op_addiu(Instruction p_instruction) {
     uint32_t i = p_instruction.imm_se();
     uint32_t t = p_instruction.t();
@@ -250,7 +481,7 @@ void CPU::op_jmp(Instruction p_instruction) {
 
 void CPU::op_jal(Instruction p_instruction) {
     this->branch_occured = true;
-    this->set_reg(31, this->program_counter);
+    this->set_reg(31, this->next_program_counter);
     this->op_jmp(p_instruction);
 }
 
@@ -259,8 +490,8 @@ void CPU::op_jalr(Instruction p_instruction) {
     uint32_t d = p_instruction.d();
     uint32_t s = p_instruction.s();
 
-    uint32_t ra = this->next_program_counter;
-    this->set_reg(d, ra);
+    uint32_t return_address = this->next_program_counter;
+    this->set_reg(d, return_address);
 
     this->next_program_counter = this->get_reg(s);
 }
@@ -281,6 +512,36 @@ void CPU::op_or(Instruction p_instruction) {
     this->set_reg(d, v);
 }
 
+void CPU::op_nor(Instruction p_instruction) {
+    uint32_t d = p_instruction.d();
+    uint32_t s = p_instruction.s();
+    uint32_t t = p_instruction.t();
+
+    uint32_t v = !(this->get_reg(s) | this->get_reg(t));
+
+    this->set_reg(d, v);
+}
+
+void CPU::op_xor(Instruction p_instruction) {
+    uint32_t d = p_instruction.d();
+    uint32_t s = p_instruction.s();
+    uint32_t t = p_instruction.t();
+
+    uint32_t v = this->get_reg(s) ^ this->get_reg(t);
+
+    this->set_reg(d, v);
+}
+
+void CPU::op_xori(Instruction p_instruction) {
+    uint32_t i = p_instruction.imm();
+    uint32_t s = p_instruction.s();
+    uint32_t t = p_instruction.t();
+
+    uint32_t v = this->get_reg(s) ^ i;
+
+    this->set_reg(t, v);
+}
+
 void CPU::op_cop0(Instruction p_instruction) {
     switch (p_instruction.cop_opcode()) {
     case 0b00000: {
@@ -291,12 +552,52 @@ void CPU::op_cop0(Instruction p_instruction) {
         this->op_mtc0(p_instruction);
         break;
     }
+    case 0b10000: {
+        this->op_rfe(p_instruction);
+        break;
+    }
     default:
-        std::cout << "CPU::OP_COP: Unhandled cop0 instruction"
-                  << std::hex << p_instruction.cop_opcode()
-                  << "\n";
+        printf("CPU::OP_COP: Unhandled cop0 instruction: %x\n",
+               p_instruction.cop_opcode());
         std::terminate();
     }
+}
+
+void CPU::op_cop2(Instruction p_instruction) {
+    printf("COP2: UNIMPLEMENTED\n");
+}
+
+void CPU::op_cop1(Instruction p_instruction) {
+    this->exception(Exception::CoprocessorError);
+}
+void CPU::op_cop3(Instruction p_instruction) {
+    this->exception(Exception::CoprocessorError);
+}
+
+void CPU::op_lwc0(Instruction p_instruction) {
+    this->exception(Exception::CoprocessorError);
+}
+void CPU::op_lwc1(Instruction p_instruction) {
+    this->exception(Exception::CoprocessorError);
+}
+void CPU::op_lwc2(Instruction p_instruction) {
+    printf("Unhandled GTE LWC: 0x%x\n", p_instruction.opcode);
+}
+void CPU::op_lwc3(Instruction p_instruction) {
+    this->exception(Exception::CoprocessorError);
+}
+
+void CPU::op_swc0(Instruction p_instruction) {
+    this->exception(Exception::CoprocessorError);
+}
+void CPU::op_swc1(Instruction p_instruction) {
+    this->exception(Exception::CoprocessorError);
+}
+void CPU::op_swc2(Instruction p_instruction) {
+    printf("Unhandled GTE SWC: 0x%x\n", p_instruction.opcode);
+}
+void CPU::op_swc3(Instruction p_instruction) {
+    this->exception(Exception::CoprocessorError);
 }
 
 void CPU::op_mtc0(Instruction p_instruction) {
@@ -334,6 +635,24 @@ void CPU::op_mtc0(Instruction p_instruction) {
     }
 }
 
+void CPU::op_rfe(Instruction p_instruction) {
+    // There are other instructions with the same encoding but
+    // all
+    // are virtual memory related and the Playstation doesn't
+    // implement them. Still, let's make sure we're not running
+    // buggy code.
+
+    if ((p_instruction.opcode & 0x3f) != 0b010000) {
+        throw std::runtime_error("INVALID cop0 instruction");
+    }
+    // Restore the pre-exception mode by shifting the Interrupt
+    // Enable/User Mode stack back to its original position.
+
+    uint32_t mode = this->status_register & 0x3f;
+    this->status_register &= !0x3f;
+    this->status_register |= mode >> 2;
+}
+
 void CPU::op_mfc0(Instruction p_instruction) {
     uint32_t cpu_r = p_instruction.t();
     uint32_t cop_r = p_instruction.d();
@@ -352,8 +671,7 @@ void CPU::op_mfc0(Instruction p_instruction) {
         v = this->epc_register;
         break;
     default:
-        std::cout << "Unhandled read from cop0r: " << cop_r
-                  << "\n";
+        printf("Unhandled read from cop0r: 0x%x\n", cop_r);
         break;
     }
     this->load_reg = cpu_r;
@@ -402,6 +720,31 @@ void CPU::op_blez(Instruction p_instruction) {
         this->branch(i);
     }
 }
+
+void CPU::op_bxx(Instruction p_instruction) {
+    uint32_t i = p_instruction.imm_se();
+    uint32_t s = p_instruction.s();
+
+    uint32_t instr = p_instruction.opcode;
+
+    uint32_t is_bgez = (instr >> 16) & 1;
+    uint32_t is_link = ((instr >> 17) & 0xf) == 8;
+
+    int32_t v = (int32_t)this->get_reg(s);
+
+    // test less than zero
+    uint32_t test = (uint32_t)(v < 0);
+    test = test ^ is_bgez;
+
+    if (is_link) {
+        uint32_t return_address = this->next_program_counter;
+        this->set_reg(31, return_address);
+    }
+    if (test != 0) {
+        this->branch_occured = true;
+        this->branch(i);
+    }
+}
 void CPU::op_addi(Instruction instruction) {
     uint32_t i = instruction.imm_se();
     uint32_t t = instruction.t();
@@ -433,12 +776,158 @@ void CPU::op_add(Instruction p_instruction) {
     this->set_reg(d, (uint32_t)result);
 }
 
+void CPU::op_sub(Instruction p_instruction) {
+    uint32_t s = p_instruction.s();
+    uint32_t d = p_instruction.d();
+    uint32_t t = p_instruction.t();
+
+    int32_t si = (int32_t)this->get_reg(s);
+    int32_t ti = (int32_t)this->get_reg(t);
+
+    int32_t result;
+    if (__builtin_sub_overflow(si, ti, &result)) {
+        this->exception(Exception::ArithmeticOverflow);
+        return;
+    }
+    this->set_reg(d, (uint32_t)result);
+}
+
+void CPU::op_subu(Instruction p_instruction) {
+    uint32_t s = p_instruction.s();
+    uint32_t t = p_instruction.t();
+    uint32_t d = p_instruction.d();
+
+    uint32_t v = this->get_reg(s) - this->get_reg(t);
+    this->set_reg(d, v);
+}
+
+void CPU::op_div(Instruction p_instruction) {
+    uint32_t s = p_instruction.s();
+    uint32_t t = p_instruction.t();
+
+    int32_t n = (int32_t)this->get_reg(s);
+    int32_t d = (int32_t)this->get_reg(t);
+
+    if (d == 0) {
+        this->hi = (uint32_t)n;
+        if (n >= 0) {
+            this->lo = 0xffffffff;
+        } else {
+            this->lo = 1;
+        }
+    } else if ((uint32_t)n == 0x80000000 and d == -1) {
+        // Result is not representable in a 32 bit signed integer
+        this->hi = 0;
+        this->lo = 0x80000000;
+    } else {
+        this->hi = (uint32_t)(n % d);
+        this->lo = (uint32_t)(n / d);
+    }
+}
+
+void CPU::op_divu(Instruction p_instruction) {
+    uint32_t s = p_instruction.s();
+    uint32_t t = p_instruction.t();
+
+    uint32_t n = this->get_reg(s);
+    uint32_t d = this->get_reg(t);
+
+    if (d == 0) {
+        // Division by zero, results are bogus
+        this->hi = n;
+        this->lo = 0xffffffff;
+    } else {
+        this->hi = n % d;
+        this->lo = n / d;
+    }
+}
+
+void CPU::op_mult(Instruction p_instruction) {
+    uint32_t s = p_instruction.s();
+    uint32_t t = p_instruction.t();
+
+    int64_t a = int64_t(int32_t(this->get_reg(s)));
+    int64_t b = int64_t(int32_t(this->get_reg(t)));
+
+    uint64_t v = uint64_t(a * b);
+
+    this->hi = uint32_t(v >> 32);
+    this->lo = uint32_t(v);
+}
+
+void CPU::op_multu(Instruction p_instruction) {
+    uint32_t s = p_instruction.s();
+    uint32_t t = p_instruction.t();
+
+    uint64_t a = this->get_reg(s);
+    uint64_t b = this->get_reg(t);
+
+    uint64_t v = a * b;
+
+    this->hi = uint32_t(v >> 32);
+    this->lo = uint32_t(v);
+}
+
+void CPU::op_mflo(Instruction p_instruction) {
+    uint32_t d = p_instruction.d();
+
+    uint32_t lo = this->lo;
+
+    this->set_reg(d, lo);
+}
+void CPU::op_mfhi(Instruction p_instruction) {
+    uint32_t d = p_instruction.d();
+
+    uint32_t hi = this->hi;
+
+    this->set_reg(d, hi);
+}
+
+void CPU::op_mtlo(Instruction p_instruction) {
+    uint32_t s = p_instruction.s();
+    this->lo = this->get_reg(s);
+}
+void CPU::op_mthi(Instruction p_instruction) {
+    uint32_t s = p_instruction.s();
+    this->hi = this->get_reg(s);
+}
+
 void CPU::op_stlu(Instruction p_instruction) {
     uint32_t d = p_instruction.d();
     uint32_t s = p_instruction.s();
     uint32_t t = p_instruction.t();
 
     uint32_t v = this->get_reg(s) < this->get_reg(t);
+    this->set_reg(d, v);
+}
+
+void CPU::op_slti(Instruction p_instruction) {
+    uint32_t i = p_instruction.imm_se();
+    uint32_t s = p_instruction.s();
+    uint32_t t = p_instruction.t();
+
+    uint32_t v = this->get_reg(s) < i;
+
+    this->set_reg(t, v);
+}
+void CPU::op_sltiu(Instruction p_instruction) {
+    uint32_t i = p_instruction.imm_se();
+    uint32_t s = p_instruction.s();
+    uint32_t t = p_instruction.t();
+
+    uint32_t v = this->get_reg(s) < i;
+
+    this->set_reg(t, v);
+}
+void CPU::op_slt(Instruction p_instruction) {
+    uint32_t d = p_instruction.d();
+    uint32_t s = p_instruction.s();
+    uint32_t t = p_instruction.t();
+
+    int32_t sv = this->get_reg(s);
+    int32_t tv = this->get_reg(t);
+
+    uint32_t v = sv < tv;
     this->set_reg(d, v);
 }
 
@@ -499,12 +988,20 @@ void CPU::exception(Exception cause) {
 
     this->program_counter = handler;
     this->next_program_counter = this->program_counter + 4;
-    return;
 }
 
-void CPU::op_syscall(Instruction p_instruction) {
-    (void)p_instruction;
+void CPU::op_syscall(Instruction) {
     this->exception(Exception::SysCall);
+}
+
+void CPU::op_break(Instruction) {
+    this->exception(Exception::Break);
+}
+
+void CPU::op_illegal(Instruction p_instruction) {
+    printf("CPU::DECODE: Unhandled instruction: 0x%x\n",
+           p_instruction.opcode);
+    this->exception(Exception::IllegalInstruction);
 }
 
 void CPU::execute_instruction(Instruction p_instruction) {
@@ -547,16 +1044,83 @@ void CPU::execute_instruction(Instruction p_instruction) {
             this->op_add(p_instruction);
             break;
         }
+        case 0b100010: {
+            this->op_sub(p_instruction);
+            break;
+        }
+        case 0b100011: {
+            this->op_subu(p_instruction);
+            break;
+        }
+        case 0b000011: {
+            this->op_sra(p_instruction);
+            break;
+        }
+        case 0b011010: {
+            this->op_div(p_instruction);
+            break;
+        }
+        case 0b010010: {
+            this->op_mflo(p_instruction);
+            break;
+        }
+        case 0b000010: {
+            this->op_srl(p_instruction);
+            break;
+        }
+        case 0b011011: {
+            this->op_divu(p_instruction);
+            break;
+        }
+        case 0b010000: {
+            this->op_mfhi(p_instruction);
+            break;
+        }
+        case 0b101010: {
+            this->op_slt(p_instruction);
+            break;
+        }
+        case 0b010011: {
+            this->op_mtlo(p_instruction);
+            break;
+        }
+        case 0b010001: {
+            this->op_mthi(p_instruction);
+            break;
+        }
+        case 0b000100: {
+            this->op_sllv(p_instruction);
+            break;
+        }
+        case 0b100111: {
+            this->op_nor(p_instruction);
+            break;
+        }
+        case 0b000111: {
+            this->op_srav(p_instruction);
+            break;
+        }
+        case 0b100110: {
+            this->op_xor(p_instruction);
+            break;
+        }
+        case 0b000110: {
+            this->op_srlv(p_instruction);
+            break;
+        }
+        case 0b110000: {
+            this->op_mult(p_instruction);
+            break;
+        }
+        case 0b011001: {
+            this->op_multu(p_instruction);
+            break;
+        }
+        case 0b001101: {
+            this->op_break(p_instruction);
+            break;
+        }
         default:
-            std::cout << "CPU::DECODE: Unhandled special "
-                         "instruction: 0x"
-                      << std::hex << p_instruction.opcode
-                      << std::endl;
-            std::cout << "Opcodes computed: " << std::dec
-                      << this->opcode_count << "\n";
-            std::cout << "PC: " << std::hex
-                      << this->current_program_counter << "\n";
-            std::terminate();
             this->exception(Exception::IllegalInstruction);
             break;
         };
@@ -634,13 +1198,81 @@ void CPU::execute_instruction(Instruction p_instruction) {
         this->op_lbu(p_instruction);
         break;
     }
+    case 0b000001: {
+        this->op_bxx(p_instruction);
+        break;
+    }
+    case 0b001010: {
+        this->op_slti(p_instruction);
+        break;
+    }
+    case 0b001011: {
+        this->op_sltiu(p_instruction);
+        break;
+    }
+    case 0b100101: {
+        this->op_lhu(p_instruction);
+        break;
+    }
+    case 0b100001: {
+        this->op_lh(p_instruction);
+        break;
+    }
+    case 0b001110: {
+        this->op_xori(p_instruction);
+        break;
+    }
+    case 0b100010: {
+        this->op_lwl(p_instruction);
+        break;
+    }
+    case 0b100110: {
+        this->op_lwr(p_instruction);
+        break;
+    }
+    case 0b101010: {
+        this->op_swl(p_instruction);
+        break;
+    }
+    case 0b101110: {
+        this->op_swr(p_instruction);
+        break;
+    }
+    case 0b110000: {
+        this->op_lwc0(p_instruction);
+        break;
+    }
+    case 0b11001: {
+        this->op_lwc1(p_instruction);
+        break;
+    }
+    case 0b110010: {
+        this->op_lwc2(p_instruction);
+        break;
+    }
+    case 0b110011: {
+        this->op_lwc3(p_instruction);
+        break;
+    }
+    case 0b111000: {
+        this->op_swc0(p_instruction);
+        break;
+    }
+    case 0b111001: {
+        this->op_swc1(p_instruction);
+        break;
+    }
+    case 0b111010: {
+        this->op_swc2(p_instruction);
+        break;
+    }
+    case 0b111011: {
+        this->op_swc3(p_instruction);
+        break;
+    }
     default:
-        std::cout << "CPU::DECODE: Unhandled instruction: 0x"
-                  << std::hex << p_instruction.opcode << "\n";
-        std::cout << "Opcodes computed: " << std::dec
-                  << this->opcode_count << std::endl;
-        std::terminate();
-        this->exception(Exception::IllegalInstruction);
+        this->op_illegal(p_instruction);
+        break;
     }
 }
 

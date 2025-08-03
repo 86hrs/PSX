@@ -1,6 +1,7 @@
 #pragma once
 #include "bios.h"
 #include "ram.h"
+#include "dma.h"
 
 struct Interconnect {
     static constexpr uint32_t REGION_MASK[] = {
@@ -20,11 +21,13 @@ struct Interconnect {
 
     Bios *bios;
     RAM *ram;
+    Dma *dma;
 
-    Interconnect(Bios *, RAM *);
+    Interconnect(Bios *, RAM *,Dma *);
     ~Interconnect() = default;
 
     uint32_t load32(uint32_t);
+    uint16_t load16(uint32_t);
     uint8_t load8(uint32_t);
 
     void store32(uint32_t, uint32_t);

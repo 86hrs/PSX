@@ -25,8 +25,14 @@ struct CPU {
     uint32_t status_register;
     uint32_t cause_register;
     uint32_t epc_register;
+    // Hi register for division remainder and multiplication high
+    // result
+    uint32_t hi;
+    // Lo register for division quotient and multiplication low
+    // result
+    uint32_t lo;
 
-    long long opcode_count;
+    uint64_t opcode_count;
 
     bool branch_occured = false;
     bool delay_slot = false;
@@ -47,7 +53,15 @@ struct CPU {
         /// Address error on store
         StoreAddressError = 0x5,
         IllegalInstruction = 0xa,
+        // Breakpoint (caused by the BREAK opcode)
+        Break = 0x9,
+        // Unsupported cocpu operation
+        CoprocessorError = 0xb,
     };
+
+    void op_cop1(Instruction);
+    void op_cop2(Instruction);
+    void op_cop3(Instruction);
 
     void run();
     void print();
@@ -59,6 +73,7 @@ struct CPU {
     void branch(uint32_t p_offset);
 
     uint32_t load32(uint32_t addr);
+    uint16_t load16(uint32_t addr);
     uint8_t load8(uint32_t addr);
 
     void store32(uint32_t addr, uint32_t val);
@@ -83,6 +98,7 @@ struct CPU {
     void op_addi(Instruction);
     void op_sh(Instruction);
     void op_stlu(Instruction);
+    void op_slti(Instruction);
     void op_addu(Instruction);
     void op_jal(Instruction);
     void op_andi(Instruction);
@@ -97,4 +113,47 @@ struct CPU {
     void op_bgtz(Instruction);
     void op_blez(Instruction);
     void op_lbu(Instruction);
+    void op_bxx(Instruction);
+    void op_subu(Instruction);
+    void op_sub(Instruction);
+    void op_sra(Instruction);
+    void op_div(Instruction);
+    void op_divu(Instruction);
+    void op_sltiu(Instruction);
+    void op_mflo(Instruction);
+    void op_srl(Instruction);
+    void op_mfhi(Instruction);
+    void op_slt(Instruction);
+    void op_mtlo(Instruction);
+    void op_mthi(Instruction);
+    void op_rfe(Instruction);
+    void op_lhu(Instruction);
+    void op_sllv(Instruction);
+    void op_lh(Instruction);
+    void op_nor(Instruction);
+    void op_srav(Instruction);
+    void op_xor(Instruction);
+    void op_srlv(Instruction);
+    void op_multu(Instruction);
+    void op_break(Instruction);
+    void op_mult(Instruction);
+    void op_xori(Instruction);
+    void op_lwl(Instruction);
+    void op_lwr(Instruction);
+    void op_swl(Instruction);
+    void op_swr(Instruction);
+
+    void op_lwc0(Instruction);
+    void op_lwc1(Instruction);
+    void op_lwc2(Instruction);
+    void op_lwc3(Instruction);
+
+    void op_swc0(Instruction);
+    void op_swc1(Instruction);
+    void op_swc2(Instruction);
+    void op_swc3(Instruction);
+    
+    
+
+    void op_illegal(Instruction);
 };

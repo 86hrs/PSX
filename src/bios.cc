@@ -1,5 +1,4 @@
 #include "bios.h"
-#include <arm/types.h>
 #include <cstdint>
 #include <fstream>
 #include <iostream>

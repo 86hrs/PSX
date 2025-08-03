@@ -2,11 +2,10 @@
 #include "bios.h"
 #include "map.h"
 #include <cstdint>
-#include <iostream>
 #include <optional>
 
-Interconnect::Interconnect(Bios *p_bios, RAM *p_ram)
-    : bios(p_bios), ram(p_ram) {}
+Interconnect::Interconnect(Bios *p_bios, RAM *p_ram, Dma *p_dma)
+    : bios(p_bios), ram(p_ram), dma(p_dma){}
 
 uint32_t Interconnect::mask_region(uint32_t p_addr) {
     uint8_t index = p_addr >> 29;
@@ -19,16 +18,28 @@ void Interconnect::store16(uint32_t p_addr, uint16_t p_val) {
 
     uint32_t addr = mask_region(p_addr);
 
-    // SPU Registers
-    if (auto offset = map::SPU.contains(addr);
+    // IQR
+    if (auto offset = map::IQR_CONTROL.contains(addr);
         offset.has_value()) {
-        std::cout << "Unhandled store16 to SPU register: 0x"
-                  << std::hex << offset.value() << "\n";
+        printf("Unhandled IQR to register: 0x%x\n", addr);
         return;
     }
 
-    std::cout << "WARNING: Unhandled store16 to address: 0x"
-              << std::hex << addr << "\n";
+    // SPU Registers
+    if (auto offset = map::SPU.contains(addr);
+        offset.has_value()) {
+        printf("Unhandled store16 to SPU register: 0x%x\n",
+               *offset);
+        return;
+    }
+
+    if (auto offset = map::RAM.contains(addr);
+        offset.has_value()) {
+        return this->ram->store16(*offset, p_val);
+    }
+
+    printf("WARNING: Unhandled store16 to address: 0x%x\n",
+           addr);
 }
 
 void Interconnect::store8(uint32_t p_addr, uint8_t p_val) {
@@ -39,20 +50,18 @@ void Interconnect::store8(uint32_t p_addr, uint8_t p_val) {
     // EXPANSION 2
     if (auto offset = map::EXPANSION_2.contains(addr);
         offset.has_value()) {
-        std::cout
-            << "Unhandled store8 to EXPANSION 2 register: 0x"
-            << std::hex << offset.value() << "\n";
+        printf("Unhandled store8 to EXPANSION2 register: 0x%x\n",
+               *offset);
         return;
     }
     // RAM
     if (auto offset = map::RAM.contains(addr);
         offset.has_value()) {
-        this->ram->store8(offset.value(), p_val);
+        this->ram->store8(*offset, p_val);
         return;
     }
 
-    std::cout << "WARNING: Unhandled store8 to address 0x"
-              << std::hex << addr << "\n";
+    printf("WARNING: Unhandled store8 to address: 0x%x\n", addr);
 }
 
 void Interconnect::store32(uint32_t p_addr, uint32_t p_val) {
@@ -61,15 +70,49 @@ void Interconnect::store32(uint32_t p_addr, uint32_t p_val) {
     if (addr == 0x1f801060)
         return;               // RAM_SIZE (ignored)
     if (addr == 0xfffe0130) { // CACHE_CONTROL
-        std::cout << "CACHE_CONTROL write: 0x" << std::hex
-                  << p_val << "\n";
+        printf("CACHE_CONTROL write: 0x%x\n", p_val);
+        return;
+    }
+
+    // INTERRUPT CONTROL REG
+    if (auto offset = map::IQR_CONTROL.contains(p_addr);
+        offset.has_value()) {
+        printf("IQR write: 0x%x\n", p_val);
+        return;
+    }
+    // GPU
+    if (auto offset = map::GPU_GP0.contains(p_addr);
+        offset.has_value()) {
+        printf("GPU0 write: 0x%x\n", p_val);
+        return;
+    }
+    // TIMER
+    if (auto offset = map::TIMER_1.contains(p_addr);
+        offset.has_value()) {
+        printf("TIMER1 write: 0x%x\n", p_val);
+        return;
+    }
+    if (auto offset = map::TIMER_2.contains(p_addr);
+        offset.has_value()) {
+        printf("TIMER2 write: 0x%x\n", p_val);
+        return;
+    }
+    if (auto offset = map::TIMER_0.contains(p_addr);
+        offset.has_value()) {
+        printf("TIMER0 write: 0x%x\n", p_val);
+        return;
+    }
+    // DMA
+    if (auto offset = map::DMA.contains(p_addr);
+        offset.has_value()) {
+        printf("DMA store at: 0x%x: 0x%x\n", p_addr, *offset);
         return;
     }
 
     // RAM
     if (auto offset = map::RAM.contains(addr);
         offset.has_value()) {
-        this->ram->store32(offset.value(), p_val);
+        this->ram->store32(*offset, p_val);
         return;
     }
 
@@ -79,52 +122,67 @@ void Interconnect::store32(uint32_t p_addr, uint32_t p_val) {
         switch (offset.value()) {
         case 0: // Expansion 1 base
             if (p_val != 0x1f000000) {
-                std::cout << "Bad expansion 1 base: 0x"
-                          << std::hex << p_val << "\n";
+                printf("BAD expansion 1 base: 0x%x\n", p_val);
                 std::terminate();
             }
             break;
         case 4: // Expansion 2 base
             if (p_val != 0x1f802000) {
-                std::cout << "Bad expansion 2 base: 0x"
-                          << std::hex << p_val << "\n";
+                printf("BAD expansion 2 base: 0x%x\n", p_val);
                 std::terminate();
             }
             break;
         default:
-            std::cout
-                << "Unhandled MEM_CONTROL write at offset: 0x"
-                << std::hex << offset.value() << "\n";
+            printf(
+                "Unhandled MEM_CONTROL write at offset: 0x%x\n",
+                *offset);
             break;
         }
         return;
     }
 
-    std::cout << "Unhandled store32 to address: 0x" << std::hex
-              << addr << "\n";
+    printf("WARNING: Unhandled store32 to address: 0x%x\n",
+           addr);
 }
 
 uint32_t Interconnect::load32(uint32_t p_addr) {
     uint32_t addr = mask_region(p_addr);
+    // GPU
+    if (auto offset = map::GPU_GP1.contains(p_addr);
+        offset.has_value()) {
+        switch (*offset) {
+        case 4:
+            return (uint32_t)0x10000000;
+        default:
+            return 0x0;
+        }
+    }
+    // DMA
+    if (auto offset = map::DMA.contains(p_addr);
+        offset.has_value()) {
+        printf("DMA read at: 0x%x\n", p_addr);
+        return 0x0;
+    }
+
     // EXPANSION 1
     if (auto offset = map::EXPANSION_1.contains(p_addr);
         offset.has_value()) {
-        return 0xdeadbeef;
+        printf("EXPANSION 1 read at: 0x%x\n", p_addr);
+        return 0;
     }
 
     // RAM
     if (auto offset = map::RAM.contains(addr);
         offset.has_value()) {
-        return ram->load32(offset.value());
+        return ram->load32(*offset);
     }
     // BIOS
     if (auto offset = map::BIOS.contains(addr);
         offset.has_value()) {
-        return bios->load32(offset.value());
+        return bios->load32(*offset);
     }
 
-    std::cout << "Unhandled load32 from address: 0x" << std::hex
-              << addr << "\n";
+    printf("WARNING: Unhandled load32 to address: 0x%x\n", addr);
     return 0xdeadbeef;
 }
 
@@ -141,8 +199,31 @@ uint8_t Interconnect::load8(uint32_t p_addr) {
         offset.has_value()) {
         return this->ram->load8(*offset);
     }
-    std::cout << "Unhandled load8 from address: 0x" << std::hex
-              << addr << "\n";
+    printf("WARNING: Unhandled load8 to address: 0x%x\n", addr);
+    return 0xd8;
+}
+uint16_t Interconnect::load16(uint32_t p_addr) {
+    uint32_t addr = mask_region(p_addr);
+
+    // SPU
+    if (auto offset = map::SPU.contains(addr);
+        offset.has_value()) {
+        printf("Unhandled load16 to SPU register: 0x%x\n", addr);
+        return 0;
+    }
+    // IQR
+    if (auto offset = map::IQR_CONTROL.contains(addr);
+        offset.has_value()) {
+        printf("Unhandled load16 to IQR register: 0x%x\n", addr);
+        return 0;
+    }
+
+    // RAM
+    if (auto offset = map::RAM.contains(addr);
+        offset.has_value()) {
+        return this->ram->load16(*offset);
+    }
+    printf("WARNING: Unhandled load16 to address: 0x%x\n", addr);
 
     return 0xd8;
 }

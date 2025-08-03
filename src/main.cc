@@ -2,14 +2,17 @@
 #include "cpu.h"
 #include "interconnect.h"
 #include "ram.h"
+#include "dma.h"
 
 int main(void) {
     Bios bios("SCPH1001.BIN");
     RAM ram;
-    Interconnect inter(&bios, &ram);
-    CPU cpu(&inter);
+    Dma dma;
+    Interconnect inter(&bios, &ram, &dma);
+    CPU* cpu = new CPU(&inter);
 
-    cpu.run();
+    cpu->run();
 
+    delete cpu;
     return EXIT_SUCCESS;
 }
