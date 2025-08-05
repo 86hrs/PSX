@@ -3,7 +3,6 @@
 #include "interconnect.h"
 #include <cstdint>
 #include <cstdlib>
-#include <exception>
 #include "r3000d.h"
 
 char buf[1024];
@@ -24,6 +23,72 @@ CPU::CPU(Interconnect *p_inter) {
     for (uint32_t &out_reg : this->out_regs) {
         out_reg = 0;
     }
+
+    rtype_dispatch[0b000000] = &CPU::op_sll;
+    rtype_dispatch[0b100101] = &CPU::op_or;
+    rtype_dispatch[0b101011] = &CPU::op_stlu;
+    rtype_dispatch[0b100001] = &CPU::op_addu;
+    rtype_dispatch[0b001000] = &CPU::op_jr;
+    rtype_dispatch[0b001001] = &CPU::op_jalr;
+    rtype_dispatch[0b100100] = &CPU::op_and;
+    rtype_dispatch[0b001100] = &CPU::op_syscall;
+    rtype_dispatch[0b100000] = &CPU::op_add;
+    rtype_dispatch[0b100010] = &CPU::op_sub;
+    rtype_dispatch[0b100011] = &CPU::op_subu;
+    rtype_dispatch[0b000011] = &CPU::op_sra;
+    rtype_dispatch[0b011010] = &CPU::op_div;
+    rtype_dispatch[0b011011] = &CPU::op_divu;
+    rtype_dispatch[0b010010] = &CPU::op_mflo;
+    rtype_dispatch[0b000010] = &CPU::op_srl;
+    rtype_dispatch[0b010000] = &CPU::op_mfhi;
+    rtype_dispatch[0b101010] = &CPU::op_slt;
+    rtype_dispatch[0b010011] = &CPU::op_mtlo;
+    rtype_dispatch[0b010001] = &CPU::op_mthi;
+    rtype_dispatch[0b000100] = &CPU::op_sllv;
+    rtype_dispatch[0b100111] = &CPU::op_nor;
+    rtype_dispatch[0b000111] = &CPU::op_srav;
+    rtype_dispatch[0b100110] = &CPU::op_xor;
+    rtype_dispatch[0b000110] = &CPU::op_srlv;
+    rtype_dispatch[0b110000] = &CPU::op_mult;
+    rtype_dispatch[0b011001] = &CPU::op_multu;
+    rtype_dispatch[0b001101] = &CPU::op_break;
+
+    main_dispatch[0b001111] = &CPU::op_lui;
+    main_dispatch[0b001101] = &CPU::op_ori;
+    main_dispatch[0b101011] = &CPU::op_sw;
+    main_dispatch[0b001001] = &CPU::op_addiu;
+    main_dispatch[0b000010] = &CPU::op_jmp;
+    main_dispatch[0b010000] = &CPU::op_cop0;
+    main_dispatch[0b000101] = &CPU::op_bne;
+    main_dispatch[0b001000] = &CPU::op_addi;
+    main_dispatch[0b100011] = &CPU::op_lw;
+    main_dispatch[0b101001] = &CPU::op_sh;
+    main_dispatch[0b000011] = &CPU::op_jal;
+    main_dispatch[0b001100] = &CPU::op_andi;
+    main_dispatch[0b101000] = &CPU::op_sb;
+    main_dispatch[0b100000] = &CPU::op_lb;
+    main_dispatch[0b000100] = &CPU::op_beq;
+    main_dispatch[0b000111] = &CPU::op_bgtz;
+    main_dispatch[0b000110] = &CPU::op_blez;
+    main_dispatch[0b100100] = &CPU::op_lbu;
+    main_dispatch[0b000001] = &CPU::op_bxx;
+    main_dispatch[0b001010] = &CPU::op_slti;
+    main_dispatch[0b001011] = &CPU::op_sltiu;
+    main_dispatch[0b100101] = &CPU::op_lhu;
+    main_dispatch[0b100001] = &CPU::op_lh;
+    main_dispatch[0b001110] = &CPU::op_xori;
+    main_dispatch[0b100010] = &CPU::op_lwl;
+    main_dispatch[0b100110] = &CPU::op_lwr;
+    main_dispatch[0b101010] = &CPU::op_swl;
+    main_dispatch[0b101110] = &CPU::op_swr;
+    main_dispatch[0b110000] = &CPU::op_lwc0;
+    main_dispatch[0b110001] = &CPU::op_lwc1;
+    main_dispatch[0b110010] = &CPU::op_lwc2;
+    main_dispatch[0b110011] = &CPU::op_lwc3;
+    main_dispatch[0b111000] = &CPU::op_swc0;
+    main_dispatch[0b111001] = &CPU::op_swc1;
+    main_dispatch[0b111010] = &CPU::op_swc2;
+    main_dispatch[0b111011] = &CPU::op_swc3;
 
     this->load_reg = 0;
     this->load_val = 0;
@@ -60,9 +125,8 @@ void CPU::run_next_instruction() {
     std::copy(std::begin(this->out_regs),
               std::end(this->out_regs), std::begin(this->regs));
 
-    r3000d_disassemble(buf, instruction.opcode, NULL);
-
-    // printf("%X : %s\n", this->current_program_counter, buf);
+    // r3000d_disassemble(buf, instruction.opcode, NULL);
+    // printf("%x : %s\n", this->current_program_counter, buf);
 
     this->opcode_count += 1;
 }
@@ -1005,277 +1069,24 @@ void CPU::op_illegal(Instruction p_instruction) {
 }
 
 void CPU::execute_instruction(Instruction p_instruction) {
-    switch (p_instruction.function()) {
-    case 0b000000: {
-        switch (p_instruction.subfunction()) {
-        case 0b000000: {
-            this->op_sll(p_instruction);
-            break;
-        }
-        case 0b100101: {
-            this->op_or(p_instruction);
-            break;
-        }
-        case 0b101011: {
-            this->op_stlu(p_instruction);
-            break;
-        }
-        case 0b100001: {
-            this->op_addu(p_instruction);
-            break;
-        }
-        case 0b001000: {
-            this->op_jr(p_instruction);
-            break;
-        }
-        case 0b100100: {
-            this->op_and(p_instruction);
-            break;
-        }
-        case 0b001001: {
-            this->op_jalr(p_instruction);
-            break;
-        }
-        case 0b001100: {
-            this->op_syscall(p_instruction);
-            break;
-        }
-        case 0b100000: {
-            this->op_add(p_instruction);
-            break;
-        }
-        case 0b100010: {
-            this->op_sub(p_instruction);
-            break;
-        }
-        case 0b100011: {
-            this->op_subu(p_instruction);
-            break;
-        }
-        case 0b000011: {
-            this->op_sra(p_instruction);
-            break;
-        }
-        case 0b011010: {
-            this->op_div(p_instruction);
-            break;
-        }
-        case 0b010010: {
-            this->op_mflo(p_instruction);
-            break;
-        }
-        case 0b000010: {
-            this->op_srl(p_instruction);
-            break;
-        }
-        case 0b011011: {
-            this->op_divu(p_instruction);
-            break;
-        }
-        case 0b010000: {
-            this->op_mfhi(p_instruction);
-            break;
-        }
-        case 0b101010: {
-            this->op_slt(p_instruction);
-            break;
-        }
-        case 0b010011: {
-            this->op_mtlo(p_instruction);
-            break;
-        }
-        case 0b010001: {
-            this->op_mthi(p_instruction);
-            break;
-        }
-        case 0b000100: {
-            this->op_sllv(p_instruction);
-            break;
-        }
-        case 0b100111: {
-            this->op_nor(p_instruction);
-            break;
-        }
-        case 0b000111: {
-            this->op_srav(p_instruction);
-            break;
-        }
-        case 0b100110: {
-            this->op_xor(p_instruction);
-            break;
-        }
-        case 0b000110: {
-            this->op_srlv(p_instruction);
-            break;
-        }
-        case 0b110000: {
-            this->op_mult(p_instruction);
-            break;
-        }
-        case 0b011001: {
-            this->op_multu(p_instruction);
-            break;
-        }
-        case 0b001101: {
-            this->op_break(p_instruction);
-            break;
-        }
-        default:
-            this->exception(Exception::IllegalInstruction);
-            break;
-        };
-        break;
-    }
-    case 0b001111: {
-        this->op_lui(p_instruction);
-        break;
-    }
-    case 0b001101: {
-        this->op_ori(p_instruction);
-        break;
-    }
-    case 0b101011: {
-        this->op_sw(p_instruction);
-        break;
-    }
-    case 0b001001: {
-        this->op_addiu(p_instruction);
-        break;
-    }
-    case 0b000010: {
-        this->op_jmp(p_instruction);
-        break;
-    }
-    case 0b010000: {
-        this->op_cop0(p_instruction);
-        break;
-    }
-    case 0b000101: {
-        this->op_bne(p_instruction);
-        break;
-    }
-    case 0b001000: {
-        this->op_addi(p_instruction);
-        break;
-    }
-    case 0b100011: {
-        this->op_lw(p_instruction);
-        break;
-    }
-    case 0b101001: {
-        this->op_sh(p_instruction);
-        break;
-    }
-    case 0b000011: {
-        this->op_jal(p_instruction);
-        break;
-    }
-    case 0b001100: {
-        this->op_andi(p_instruction);
-        break;
-    }
-    case 0b101000: {
-        this->op_sb(p_instruction);
-        break;
-    }
-    case 0b100000: {
-        this->op_lb(p_instruction);
-        break;
-    }
-    case 0b000100: {
-        this->op_beq(p_instruction);
-        break;
-    }
-    case 0b000111: {
-        this->op_bgtz(p_instruction);
-        break;
-    }
-    case 0b000110: {
-        this->op_blez(p_instruction);
-        break;
-    }
-    case 0b100100: {
-        this->op_lbu(p_instruction);
-        break;
-    }
-    case 0b000001: {
-        this->op_bxx(p_instruction);
-        break;
-    }
-    case 0b001010: {
-        this->op_slti(p_instruction);
-        break;
-    }
-    case 0b001011: {
-        this->op_sltiu(p_instruction);
-        break;
-    }
-    case 0b100101: {
-        this->op_lhu(p_instruction);
-        break;
-    }
-    case 0b100001: {
-        this->op_lh(p_instruction);
-        break;
-    }
-    case 0b001110: {
-        this->op_xori(p_instruction);
-        break;
-    }
-    case 0b100010: {
-        this->op_lwl(p_instruction);
-        break;
-    }
-    case 0b100110: {
-        this->op_lwr(p_instruction);
-        break;
-    }
-    case 0b101010: {
-        this->op_swl(p_instruction);
-        break;
-    }
-    case 0b101110: {
-        this->op_swr(p_instruction);
-        break;
-    }
-    case 0b110000: {
-        this->op_lwc0(p_instruction);
-        break;
-    }
-    case 0b11001: {
-        this->op_lwc1(p_instruction);
-        break;
-    }
-    case 0b110010: {
-        this->op_lwc2(p_instruction);
-        break;
-    }
-    case 0b110011: {
-        this->op_lwc3(p_instruction);
-        break;
-    }
-    case 0b111000: {
-        this->op_swc0(p_instruction);
-        break;
-    }
-    case 0b111001: {
-        this->op_swc1(p_instruction);
-        break;
-    }
-    case 0b111010: {
-        this->op_swc2(p_instruction);
-        break;
-    }
-    case 0b111011: {
-        this->op_swc3(p_instruction);
-        break;
-    }
-    default:
-        this->op_illegal(p_instruction);
-        break;
-    }
-}
+    uint32_t function = p_instruction.function();
+    uint32_t subfunction = p_instruction.subfunction();
 
+    if (function == 0x0) {
+        op_handler h = rtype_dispatch[subfunction];
+        if (h)
+            (this->*h)(p_instruction);
+        else
+            this->op_illegal(p_instruction);
+
+        return;
+    }
+    op_handler h = main_dispatch[function];
+    if (h)
+        (this->*h)(p_instruction);
+    else
+        this->op_illegal(p_instruction);
+}
 void CPU::run() {
     while (true) {
         this->run_next_instruction();

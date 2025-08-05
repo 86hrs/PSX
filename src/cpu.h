@@ -1,4 +1,5 @@
 #pragma once
+#include <cstddef>
 #include <cstdint>
 #include "interconnect.h"
 #include "instruction.h"
@@ -17,7 +18,9 @@ KSEG2      LENGTH   Description
 0xfffe0000 512B     I/O Ports
 */
 
+
 struct CPU {
+
     uint32_t program_counter;
     uint32_t next_program_counter;
     uint32_t current_program_counter;
@@ -82,6 +85,11 @@ struct CPU {
 
     uint32_t get_reg(uint32_t idx);
     void set_reg(uint32_t idx, uint32_t val);
+
+    typedef void (CPU::*op_handler)(Instruction);
+
+    op_handler rtype_dispatch[63] = {nullptr };
+    op_handler main_dispatch[63] = { nullptr };
 
     void op_lui(Instruction);
     void op_ori(Instruction);

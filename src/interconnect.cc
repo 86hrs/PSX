@@ -5,12 +5,32 @@
 #include <optional>
 
 Interconnect::Interconnect(Bios *p_bios, RAM *p_ram, Dma *p_dma)
-    : bios(p_bios), ram(p_ram), dma(p_dma){}
+    : bios(p_bios), ram(p_ram), dma(p_dma) {}
 
 uint32_t Interconnect::mask_region(uint32_t p_addr) {
     uint8_t index = p_addr >> 29;
     uint32_t masked = p_addr & REGION_MASK[index];
     return masked;
+}
+
+uint32_t Interconnect::dma_reg(uint32_t p_offset) {
+    switch (p_offset) {
+    case 0x70:
+        return this->dma->get_control();
+    default:
+        printf("Unhandled DMA access\n");
+        return 0;
+    }
+}
+void Interconnect::set_dma_reg(uint32_t p_offset, uint32_t p_val) {
+    switch(p_offset) {
+        case 0x70:
+            this->dma->set_control(p_val);
+            break;
+        default: 
+            printf("Unhandled DMA write access\n");
+            break;
+    }
 }
 
 void Interconnect::store16(uint32_t p_addr, uint16_t p_val) {
@@ -105,7 +125,8 @@ void Interconnect::store32(uint32_t p_addr, uint32_t p_val) {
     // DMA
     if (auto offset = map::DMA.contains(p_addr);
         offset.has_value()) {
-        printf("DMA store at: 0x%x: 0x%x\n", p_addr, *offset);
+        printf("DMA write: 0x%x\n", p_val);
+        this->set_dma_reg(*offset, p_val);
         return;
     }
 
@@ -160,8 +181,7 @@ uint32_t Interconnect::load32(uint32_t p_addr) {
     // DMA
     if (auto offset = map::DMA.contains(p_addr);
         offset.has_value()) {
-        printf("DMA read at: 0x%x\n", p_addr);
-        return 0x0;
+        return this->dma_reg(*offset);
     }
 
     // EXPANSION 1

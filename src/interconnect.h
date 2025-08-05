@@ -33,5 +33,9 @@ struct Interconnect {
     void store32(uint32_t, uint32_t);
     void store16(uint32_t, uint16_t);
     void store8(uint32_t, uint8_t);
-    uint32_t mask_region(uint32_t addr);
+
+    uint32_t mask_region(uint32_t p_addr);
+
+    uint32_t dma_reg(uint32_t p_offset);
+    void set_dma_reg(uint32_t p_offset, uint32_t p_val);
 };
