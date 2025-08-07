@@ -36,3 +36,12 @@ void Dma::set_interrupt(uint32_t p_val) {
     uint32_t ack = (uint8_t)((p_val >> 24) & 0x3f);
     this->channel_irq_flags &= !ack;
 }
+
+const Channel& Dma::get_channel(Port p_port) {
+    const Channel& ref = this->channels[p_port];
+    return ref;
+}
+Channel& Dma::get_mut_channel(Port p_port) {
+    Channel& ref = this->channels[p_port];
+    return ref;
+}

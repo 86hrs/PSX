@@ -1,7 +1,9 @@
 #include "interconnect.h"
 #include "bios.h"
+#include "dma.h"
 #include "map.h"
 #include <cstdint>
+#include <exception>
 #include <optional>
 
 Interconnect::Interconnect(Bios *p_bios, RAM *p_ram, Dma *p_dma)
@@ -13,23 +15,162 @@ uint32_t Interconnect::mask_region(uint32_t p_addr) {
     return masked;
 }
 
+void Interconnect::do_dma(Port p_port) {
+    if (this->dma->get_channel(p_port).sync ==
+        Sync::LinkedList) {
+        printf("Linked list mode is unsupported");
+    }
+    this->do_dma_block(p_port);
+}
+
+void Interconnect::do_dma_block(Port p_port) {
+    Channel &channel = this->dma->get_mut_channel(p_port);
+
+    int32_t increment = 0;
+
+    if (channel.get_step() == Step::Increment)
+        increment = 4;
+    else if (channel.get_step() == Step::Decrement)
+        increment = -4;
+    else {
+        printf("Invalid DMA step mode\n");
+        std::terminate();
+    }
+
+    uint32_t addr = channel.get_base();
+
+    uint32_t remsz;
+    if (auto transfer_size = channel.transfer_size();
+        transfer_size.has_value())
+        remsz = *transfer_size;
+    else
+        printf("Couldn't figure out DMA block transfer size");
+
+    while (remsz > 0) {
+        // Address wrapping logic, hardware may ignore LSBs
+        uint32_t cur_addr = addr & 0x1FFFFC;
+
+        switch (channel.get_direction()) {
+        case Direction::FromRam:
+            printf("Unhandled DMA direction: From RAM\n");
+            std::terminate();
+        case Direction::ToRam: {
+            uint32_t src_word = 0;
+
+            switch (p_port) {
+            case Port::Otc:
+                if (remsz == 1) {
+                    // Last word: end of ordering table
+                    // marker
+                    src_word = 0x00FFFFFF;
+                } else {
+                    // Otherwise: pointer to previous entry
+                    src_word = (addr - 4) & 0x1FFFFF;
+                }
+                break;
+
+            default:
+                printf("Unhandled DMA source port %d",
+                       (uint8_t)p_port);
+                std::terminate();
+            }
+
+            this->ram->store32(cur_addr, src_word);
+            break;
+        }
+
+        default:
+            throw std::runtime_error("Unknown DMA direction");
+        }
+
+        addr += increment;
+        --remsz;
+    }
+    channel.done();
+}
+
 uint32_t Interconnect::dma_reg(uint32_t p_offset) {
-    switch (p_offset) {
-    case 0x70:
-        return this->dma->get_control();
+    uint32_t major = (p_offset & 0x70) >> 4;
+    uint32_t minor = p_offset & 0xf;
+
+    switch (major) {
+    case 0 ... 6: {
+        Port major_port = (Port)major;
+        Channel &channel =
+            this->dma->get_mut_channel(major_port);
+        if (minor == 8) {
+            return channel.get_control();
+        } else {
+            printf("Unhandled DMA read at: 0x%x\n", p_offset);
+            std::terminate();
+        }
+    }
+    case 7: {
+        if (minor == 0) {
+            return this->dma->get_control();
+        } else if (minor == 4) {
+            return this->dma->interrupt();
+        } else {
+            printf("Unhandled DMA read at: 0x%x\n", p_offset);
+            std::terminate();
+        }
+    }
     default:
-        printf("Unhandled DMA access\n");
-        return 0;
+        printf("Unhandled DMA read at: 0x%x\n", p_offset);
+        std::terminate();
     }
 }
-void Interconnect::set_dma_reg(uint32_t p_offset, uint32_t p_val) {
-    switch(p_offset) {
-        case 0x70:
+void Interconnect::set_dma_reg(uint32_t p_offset,
+                               uint32_t p_val) {
+    uint32_t major = (p_offset & 0x70) >> 4;
+    uint32_t minor = p_offset & 0xf;
+
+    std::optional<Port> active_port;
+
+    switch (major) {
+    case 0 ... 6: {
+        Port port = (Port)major;
+        Channel &channel = this->dma->get_mut_channel(port);
+        switch (minor) {
+        case 0x0:
+            channel.set_base(p_val);
+            break;
+        case 0x4:
+            channel.set_block_control(p_val);
+            break;
+        case 0x8:
+            channel.set_control(p_val);
+            break;
+        default:
+            printf("Unhandled DMA write at: 0x%x, val: "
+                   "0x%08x, major: %d, minor: %d\n",
+                   p_offset, p_val, major, minor);
+            std::terminate();
+        }
+
+        if (channel.active()) {
+            active_port = port;
+        }
+        break;
+    }
+    case 7: {
+        if (minor == 0) {
             this->dma->set_control(p_val);
             break;
-        default: 
-            printf("Unhandled DMA write access\n");
+        }
+        if (minor == 4) {
+            this->dma->set_interrupt(p_val);
             break;
+        }
+    }
+    default:
+        printf("Unhandled DMA write at: 0x%x, val: 0x%08x, "
+               "major: %d, minor: %d\n",
+               p_offset, p_val, major, minor);
+        std::terminate();
+    }
+    if (active_port.has_value()) {
+        this->do_dma(*active_port);
     }
 }
 
@@ -70,7 +211,8 @@ void Interconnect::store8(uint32_t p_addr, uint8_t p_val) {
     // EXPANSION 2
     if (auto offset = map::EXPANSION_2.contains(addr);
         offset.has_value()) {
-        printf("Unhandled store8 to EXPANSION2 register: 0x%x\n",
+        printf("Unhandled store8 to EXPANSION2 register: "
+               "0x%x\n",
                *offset);
         return;
     }
@@ -85,6 +227,7 @@ void Interconnect::store8(uint32_t p_addr, uint8_t p_val) {
 }
 
 void Interconnect::store32(uint32_t p_addr, uint32_t p_val) {
+    fflush(stdout);
     uint32_t addr = mask_region(p_addr);
 
     if (addr == 0x1f801060)
@@ -104,6 +247,12 @@ void Interconnect::store32(uint32_t p_addr, uint32_t p_val) {
     if (auto offset = map::GPU_GP0.contains(p_addr);
         offset.has_value()) {
         printf("GPU0 write: 0x%x\n", p_val);
+        return;
+    }
+    // GPU
+    if (auto offset = map::GPU_GP1.contains(p_addr);
+        offset.has_value()) {
+        printf("GPU1 write: 0x%x\n", p_val);
         return;
     }
     // TIMER
@@ -154,9 +303,9 @@ void Interconnect::store32(uint32_t p_addr, uint32_t p_val) {
             }
             break;
         default:
-            printf(
-                "Unhandled MEM_CONTROL write at offset: 0x%x\n",
-                *offset);
+            printf("Unhandled MEM_CONTROL write at offset: "
+                   "0x%x\n",
+                   *offset);
             break;
         }
         return;
@@ -167,16 +316,32 @@ void Interconnect::store32(uint32_t p_addr, uint32_t p_val) {
 }
 
 uint32_t Interconnect::load32(uint32_t p_addr) {
+    fflush(stdout);
     uint32_t addr = mask_region(p_addr);
     // GPU
+    if (auto offset = map::GPU_STATUS.contains(p_addr);
+        offset.has_value()) {
+        switch (*offset) {
+        case 4:
+            return (uint32_t)0x1c000000;
+        default:
+            return 0x0;
+        }
+    }
     if (auto offset = map::GPU_GP1.contains(p_addr);
         offset.has_value()) {
         switch (*offset) {
         case 4:
-            return (uint32_t)0x10000000;
+            return (uint32_t)0x1c000000;
         default:
             return 0x0;
         }
+    }
+    // DMA
+    if (auto offset = map::GPU_GP0.contains(p_addr);
+        offset.has_value()) {
+        printf("GPU0 read at: 0x%x\n", p_addr);
+        return 0;
     }
     // DMA
     if (auto offset = map::DMA.contains(p_addr);
@@ -225,6 +390,8 @@ uint8_t Interconnect::load8(uint32_t p_addr) {
 uint16_t Interconnect::load16(uint32_t p_addr) {
     uint32_t addr = mask_region(p_addr);
 
+    fflush(stdout);
+
     // SPU
     if (auto offset = map::SPU.contains(addr);
         offset.has_value()) {
@@ -245,5 +412,6 @@ uint16_t Interconnect::load16(uint32_t p_addr) {
     }
     printf("WARNING: Unhandled load16 to address: 0x%x\n", addr);
 
+    
     return 0xd8;
 }

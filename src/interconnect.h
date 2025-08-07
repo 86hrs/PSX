@@ -23,7 +23,7 @@ struct Interconnect {
     RAM *ram;
     Dma *dma;
 
-    Interconnect(Bios *, RAM *,Dma *);
+    Interconnect(Bios *, RAM *, Dma *);
     ~Interconnect() = default;
 
     uint32_t load32(uint32_t);
@@ -38,4 +38,7 @@ struct Interconnect {
 
     uint32_t dma_reg(uint32_t p_offset);
     void set_dma_reg(uint32_t p_offset, uint32_t p_val);
+
+    void do_dma(Port);
+    void do_dma_block(Port);
 };

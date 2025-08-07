@@ -24,6 +24,8 @@ add_executable(${PROJECT_NAME}
     src/ram.cc
     src/dma.h
     src/dma.cc
+    src/channel.h
+    src/channel.cc
     src/r3000d.h
     src/r3000d.c
 )
