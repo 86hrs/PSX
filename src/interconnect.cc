@@ -16,11 +16,45 @@ uint32_t Interconnect::mask_region(uint32_t p_addr) {
 }
 
 void Interconnect::do_dma(Port p_port) {
-    if (this->dma->get_channel(p_port).sync ==
+    if (this->dma->get_mut_channel(p_port).get_sync() ==
         Sync::LinkedList) {
-        printf("Linked list mode is unsupported");
+        this->do_dma_linked_list(p_port);
+        return;
     }
     this->do_dma_block(p_port);
+}
+
+void Interconnect::do_dma_linked_list(Port p_port) {
+    Channel &channel = this->dma->get_mut_channel(p_port);
+
+    uint32_t addr = channel.get_base() & 0x1ffffc;
+
+    if (channel.get_direction() == Direction::ToRam) {
+        printf("Inavlid DMA direction for linked list mode\n");
+        std::terminate();
+    }
+
+    if (p_port != Port::Gpu) {
+        printf("Attempted linked list DMA on port: %d\n",
+               p_port);
+        std::terminate();
+    }
+    for (;;) {
+        uint32_t header = this->ram->load32(addr);
+        uint32_t remsz = header >> 24;
+
+        while (remsz > 0) {
+            addr = (addr + 4) & 0x1ffffc;
+            uint32_t command = this->ram->load32(addr);
+            printf("GPU command: 0x%x\n", command);
+            remsz -= 1;
+        }
+        if ((header & 0x800000) != 0) {
+            break;
+        }
+        addr = header & 0x1ffffc;
+    }
+    channel.done();
 }
 
 void Interconnect::do_dma_block(Port p_port) {
@@ -51,9 +85,17 @@ void Interconnect::do_dma_block(Port p_port) {
         uint32_t cur_addr = addr & 0x1FFFFC;
 
         switch (channel.get_direction()) {
-        case Direction::FromRam:
-            printf("Unhandled DMA direction: From RAM\n");
-            std::terminate();
+        case Direction::FromRam: {
+            uint32_t src_word = this->ram->load32(cur_addr);
+            if (p_port == Port::Gpu) {
+                printf("GPU data: 0x%x\n", src_word);
+            } else {
+                printf("Unhandled DMA destination port: %d\n",
+                       p_port);
+                std::terminate();
+            }
+            break;
+        }
         case Direction::ToRam: {
             uint32_t src_word = 0;
 
@@ -319,29 +361,15 @@ uint32_t Interconnect::load32(uint32_t p_addr) {
     fflush(stdout);
     uint32_t addr = mask_region(p_addr);
     // GPU
-    if (auto offset = map::GPU_STATUS.contains(p_addr);
-        offset.has_value()) {
-        switch (*offset) {
-        case 4:
-            return (uint32_t)0x1c000000;
-        default:
-            return 0x0;
-        }
-    }
     if (auto offset = map::GPU_GP1.contains(p_addr);
         offset.has_value()) {
-        switch (*offset) {
-        case 4:
-            return (uint32_t)0x1c000000;
-        default:
-            return 0x0;
-        }
+        return 0x1C000000;
     }
-    // DMA
+
     if (auto offset = map::GPU_GP0.contains(p_addr);
         offset.has_value()) {
         printf("GPU0 read at: 0x%x\n", p_addr);
-        return 0;
+        return 0x0;
     }
     // DMA
     if (auto offset = map::DMA.contains(p_addr);
@@ -360,6 +388,12 @@ uint32_t Interconnect::load32(uint32_t p_addr) {
     if (auto offset = map::RAM.contains(addr);
         offset.has_value()) {
         return ram->load32(*offset);
+    }
+    // IRQ
+    if (auto offset = map::IQR_CONTROL.contains(addr);
+        offset.has_value()) {
+        printf("IRQ read: 0x%x\n", p_addr);
+        return 0;
     }
     // BIOS
     if (auto offset = map::BIOS.contains(addr);
@@ -411,7 +445,5 @@ uint16_t Interconnect::load16(uint32_t p_addr) {
         return this->ram->load16(*offset);
     }
     printf("WARNING: Unhandled load16 to address: 0x%x\n", addr);
-
-    
     return 0xd8;
 }

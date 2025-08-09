@@ -41,4 +41,5 @@ struct Interconnect {
 
     void do_dma(Port);
     void do_dma_block(Port);
+    void do_dma_linked_list(Port);
 };

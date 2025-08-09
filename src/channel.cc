@@ -34,18 +34,18 @@ uint32_t Channel::get_control() {
 }
 
 void Channel::set_control(uint32_t p_val) {
-    if (((p_val & 1) != 0) == true) {
-        this->direction = Direction::FromRam;
-    } else {
-        this->direction = Direction::ToRam;
-    }
-    if ((((p_val >> 8) & 1) != 0) == true)
-        this->step = Step::Decrement;
-    else
-        this->step = Step::Increment;
+    // bit 0: direction
+    this->direction = (p_val & 1) ? Direction::FromRam
+                                  : Direction::ToRam; // ok
 
-    this->chop = ((p_val >> 8) & 1) != 0;
+    // bit 1: address step  (FIXED — was using bit 8)
+    this->step = ((p_val >> 1) & 1) ? Step::Decrement
+                                    : Step::Increment; // <-- fix
 
+    // bit 8: chopping enable
+    this->chop = ((p_val >> 8) & 1) != 0; // ok
+
+    // bits 10..9: sync mode
     switch ((p_val >> 9) & 3) {
     case 0:
         this->sync = Sync::Manual;
@@ -57,16 +57,17 @@ void Channel::set_control(uint32_t p_val) {
         this->sync = Sync::LinkedList;
         break;
     default:
-        printf("Unkown DMA sunc mode ");
+        printf("Unknown DMA sync mode\n");
         std::terminate();
     }
 
+    // bits 18..16 and 22..20: chop sizes
     this->chop_dma_sz = uint8_t((p_val >> 16) & 7);
     this->chop_cpu_sz = uint8_t((p_val >> 20) & 7);
 
+    // bit 24: enable, bit 28: trigger, bits 30..29: dummy
     this->enable = ((p_val >> 24) & 1) != 0;
     this->trigger = ((p_val >> 28) & 1) != 0;
-
     this->dummy = uint8_t((p_val >> 29) & 3);
 }
 

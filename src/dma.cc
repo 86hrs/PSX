@@ -33,7 +33,7 @@ void Dma::set_interrupt(uint32_t p_val) {
 
     this->irq_en = ((p_val >> 23) & 1) != 0;
 
-    uint32_t ack = (uint8_t)((p_val >> 24) & 0x3f);
+    uint8_t ack = (uint8_t)((p_val >> 24) & 0x3f);
     this->channel_irq_flags &= !ack;
 }
 
