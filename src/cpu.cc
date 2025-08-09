@@ -4,6 +4,8 @@
 #include <cstdint>
 #include <cstdlib>
 #include "r3000d.h"
+#include <cstdio>
+#include <stdexcept>
 
 char buf[1024];
 

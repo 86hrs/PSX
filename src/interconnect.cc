@@ -5,6 +5,8 @@
 #include <cstdint>
 #include <exception>
 #include <optional>
+#include <cstdio>
+#include <stdexcept>
 
 Interconnect::Interconnect(Bios *p_bios, RAM *p_ram, Dma *p_dma)
     : bios(p_bios), ram(p_ram), dma(p_dma) {}
