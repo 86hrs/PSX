@@ -26,6 +26,8 @@ add_executable(${PROJECT_NAME}
     src/dma.cc
     src/channel.h
     src/channel.cc
+    src/gpu.h
+    src/gpu.cc
     src/r3000d.h
     src/r3000d.c
 )

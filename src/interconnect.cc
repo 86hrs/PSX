@@ -64,11 +64,11 @@ void Interconnect::do_dma_block(Port p_port) {
 
     int32_t increment = 0;
 
-    if (channel.get_step() == Step::Increment)
+    if (channel.get_step() == Step::Increment) {
         increment = 4;
-    else if (channel.get_step() == Step::Decrement)
+    } else if (channel.get_step() == Step::Decrement) {
         increment = -4;
-    else {
+    } else {
         printf("Invalid DMA step mode\n");
         std::terminate();
     }
@@ -77,10 +77,12 @@ void Interconnect::do_dma_block(Port p_port) {
 
     uint32_t remsz;
     if (auto transfer_size = channel.transfer_size();
-        transfer_size.has_value())
+        transfer_size.has_value()) {
         remsz = *transfer_size;
-    else
+    } else {
         printf("Couldn't figure out DMA block transfer size");
+        std::terminate();
+    }
 
     while (remsz > 0) {
         // Address wrapping logic, hardware may ignore LSBs
@@ -112,7 +114,6 @@ void Interconnect::do_dma_block(Port p_port) {
                     src_word = (addr - 4) & 0x1FFFFF;
                 }
                 break;
-
             default:
                 printf("Unhandled DMA source port %d",
                        (uint8_t)p_port);
@@ -122,13 +123,13 @@ void Interconnect::do_dma_block(Port p_port) {
             this->ram->store32(cur_addr, src_word);
             break;
         }
-
         default:
-            throw std::runtime_error("Unknown DMA direction");
+            printf("ERROR: Unknown DMA direction");
+            std::terminate();
         }
 
         addr += increment;
-        --remsz;
+        remsz--;
     }
     channel.done();
 }
