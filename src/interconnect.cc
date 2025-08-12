@@ -8,8 +8,9 @@
 #include <cstdio>
 #include <stdexcept>
 
-Interconnect::Interconnect(Bios *p_bios, RAM *p_ram, Dma *p_dma)
-    : bios(p_bios), ram(p_ram), dma(p_dma) {}
+Interconnect::Interconnect(Bios *p_bios, RAM *p_ram, Dma *p_dma,
+                           GPU *p_gpu)
+    : bios(p_bios), ram(p_ram), dma(p_dma), gpu(p_gpu) {}
 
 uint32_t Interconnect::mask_region(uint32_t p_addr) {
     uint8_t index = p_addr >> 29;
@@ -227,7 +228,7 @@ void Interconnect::store16(uint32_t p_addr, uint16_t p_val) {
     // IQR
     if (auto offset = map::IQR_CONTROL.contains(addr);
         offset.has_value()) {
-        printf("Unhandled IQR to register: 0x%x\n", addr);
+        printf("Unhandled store16 to IQR register: 0x%x\n", addr);
         return;
     }
 
@@ -291,13 +292,7 @@ void Interconnect::store32(uint32_t p_addr, uint32_t p_val) {
     // GPU
     if (auto offset = map::GPU_GP0.contains(p_addr);
         offset.has_value()) {
-        printf("GPU0 write: 0x%x\n", p_val);
-        return;
-    }
-    // GPU
-    if (auto offset = map::GPU_GP1.contains(p_addr);
-        offset.has_value()) {
-        printf("GPU1 write: 0x%x\n", p_val);
+        this->gpu->gp0(p_val);
         return;
     }
     // TIMER

@@ -2,6 +2,7 @@
 #include "bios.h"
 #include "ram.h"
 #include "dma.h"
+#include "gpu.h"
 
 struct Interconnect {
     static constexpr uint32_t REGION_MASK[] = {
@@ -22,8 +23,9 @@ struct Interconnect {
     Bios *bios;
     RAM *ram;
     Dma *dma;
+    GPU *gpu;
 
-    Interconnect(Bios *, RAM *, Dma *);
+    Interconnect(Bios *, RAM *, Dma *, GPU *);
     ~Interconnect() = default;
 
     uint32_t load32(uint32_t);

@@ -1,74 +1,115 @@
 #include "gpu.h"
+#include <cstdio>
+#include <exception>
 
-Gpu::Gpu() {
-  page_base_x = 0;
-  page_base_y = 0;
+GPU::GPU() {
+    this->page_base_x = 0;
+    this->page_base_y = 0;
+    this->semi_transparency = 0;
+    this->texture_depth = TextureDepth::T4Bit;
+    this->dithering = false;
+    this->draw_to_display = false;
+    this->force_set_mask_bit = false;
+    this->preserve_masked_pixels = false;
+    this->field = Field::Top;
+    this->texture_disable = false;
+    this->hres = HorizontalRes::from_fields(0, 0);
+    this->vres = VerticalRes::Y240Lines;
 
-  semi_transparency = 0;
+    this->vmode = VMode::Ntsc;
+    this->display_depth = DisplayDepth::D15Bits;
 
-  texture_depth = TextureDepth::T4Bit;
-  dithering = false;
-  draw_to_display = false;
-  force_set_mask_bit = false;
-  preserve_masked_pixels = false;
-  field = Field::Top;
-  texture_disable = false;
-  hres = HorizontalRes::from_fields(0, 0);
-  vres = VerticalRes::Y240Lines;
-
-  vmode = VMode::Ntsc;
-  display_depth = DisplayDepth::D15Bits;
-
-  interlaced = false;
-  display_disabled = true;
-  interrupt = false;
-  dma_direction = DmaDirection::Off;
+    this->interlaced = false;
+    this->display_disabled = true;
+    this->interrupt = false;
+    this->dma_direction = DmaDirection::Off;
 }
 
-uint32_t Gpu::status() {
-  uint32_t r = 0;
+uint32_t GPU::status() {
+    uint32_t r = 0;
 
-  r |= (uint32_t(this->page_base_x)) << 0;
-  r |= (uint32_t(this->page_base_y)) << 4;
-  r |= (uint32_t(this->semi_transparency)) << 5;
-  r |= (uint32_t(this->texture_depth)) << 7;
-  r |= (uint32_t(this->dithering)) << 9;
-  r |= (uint32_t(this->draw_to_display)) << 10;
-  r |= (uint32_t(this->force_set_mask_bit)) << 11;
-  r |= (uint32_t(this->preserve_masked_pixels)) << 12;
-  r |= (uint32_t(this->field)) << 13;
-  r |= (uint32_t(this->texture_disable)) << 15;
-  r |= this->hres.into_status();
-  r |= (uint32_t(this->vres)) << 19;
-  r |= (uint32_t(this->vmode)) << 20;
-  r |= (uint32_t(this->display_depth)) << 21;
-  r |= (uint32_t(this->interlaced)) << 22;
-  r |= (uint32_t(this->display_disabled)) << 23;
-  r |= (uint32_t(this->interrupt)) << 24;
+    r |= (uint32_t(this->page_base_x)) << 0;
+    r |= (uint32_t(this->page_base_y)) << 4;
+    r |= (uint32_t(this->semi_transparency)) << 5;
+    r |= (uint32_t(this->texture_depth)) << 7;
+    r |= (uint32_t(this->dithering)) << 9;
+    r |= (uint32_t(this->draw_to_display)) << 10;
+    r |= (uint32_t(this->force_set_mask_bit)) << 11;
+    r |= (uint32_t(this->preserve_masked_pixels)) << 12;
+    r |= (uint32_t(this->field)) << 13;
+    r |= (uint32_t(this->texture_disable)) << 15;
+    r |= this->hres.into_status();
+    r |= (uint32_t(this->vres)) << 19;
+    r |= (uint32_t(this->vmode)) << 20;
+    r |= (uint32_t(this->display_depth)) << 21;
+    r |= (uint32_t(this->interlaced)) << 22;
+    r |= (uint32_t(this->display_disabled)) << 23;
+    r |= (uint32_t(this->interrupt)) << 24;
 
-  r |= 1 << 26;
-  r |= 1 << 27;
-  r |= 1 << 28;
+    r |= 1 << 26;
+    r |= 1 << 27;
+    r |= 1 << 28;
 
-  r |= (uint32_t(this->dma_direction)) << 29;
-  r |= 0 << 31;
+    r |= (uint32_t(this->dma_direction)) << 29;
+    r |= 0 << 31;
 
-  uint32_t dma_request = 0;
-  switch (this->dma_direction) {
-  case DmaDirection::Off:
-    dma_request = 0;
-    break;
-  case DmaDirection::Fifo:
-    dma_request = 1;
-    break;
-  case DmaDirection::CpuToGp0:
-    dma_request = (r >> 28) & 1;
-    break;
-  case DmaDirection::VRamToCpu:
-    dma_request = (r >> 27) & 1;
-    break;
-  }
-  r |= dma_request << 25;
+    uint32_t dma_request = 0;
+    switch (this->dma_direction) {
+    case DmaDirection::Off:
+        dma_request = 0;
+        break;
+    case DmaDirection::Fifo:
+        dma_request = 1;
+        break;
+    case DmaDirection::CpuToGp0:
+        dma_request = (r >> 28) & 1;
+        break;
+    case DmaDirection::VRamToCpu:
+        dma_request = (r >> 27) & 1;
+        break;
+    }
+    r |= dma_request << 25;
 
-  return r;
+    return r;
+}
+
+void GPU::gp0(uint32_t p_val) {
+    uint32_t opcode = (p_val >> 24) & 0xff;
+
+    switch (opcode) {
+    case 0xe1:
+        this->gp0_draw_mode(p_val);
+        break;
+    default:
+        printf("Unhandled GP0 command: 0x%x\n", p_val);
+        std::terminate();
+    }
+}
+
+void GPU::gp0_draw_mode(uint32_t p_val) {
+    this->page_base_x = uint8_t(p_val & 0xf);
+    this->page_base_y = uint8_t((p_val >> 4) & 1);
+    this->semi_transparency = uint8_t((p_val >> 5) & 3);
+
+    switch ((p_val >> 7) & 3) {
+    case 0:
+        this->texture_depth = TextureDepth::T4Bit;
+        break;
+    case 1:
+        this->texture_depth = TextureDepth::T8Bit;
+        break;
+    case 2:
+        this->texture_depth = TextureDepth::T15Bit;
+        break;
+    default:
+        printf("Unhandled textured depth: %d\n",
+               ((p_val >> 7) & 3));
+        std::terminate();
+    }
+
+    this->dithering = ((p_val >> 9) & 1) != 0;
+    this->draw_to_display = ((p_val >> 10) & 1) != 0;
+    this->texture_disable = ((p_val >> 11) & 1) != 0;
+    this->rectangle_texture_x_flip = ((p_val >> 12) & 1) != 0;
+    this->rectangle_texture_y_flip = ((p_val >> 13) & 1) != 0;
 }

@@ -61,7 +61,7 @@ struct HorizontalRes {
   // Retrieve value of bits [18:16] of the status register
   uint32_t into_status() const { return static_cast<uint32_t>(value) << 16; }
 };
-struct Gpu {
+struct GPU {
   uint8_t page_base_x;
   uint8_t page_base_y;
 
@@ -73,6 +73,9 @@ struct Gpu {
   bool force_set_mask_bit;
   bool texture_disable;
   bool preserve_masked_pixels;
+
+  bool rectangle_texture_x_flip;
+  bool rectangle_texture_y_flip;
 
   Field field;
 
@@ -89,8 +92,11 @@ struct Gpu {
   bool interrupt;
   DmaDirection dma_direction;  
 
-  Gpu();
-  ~Gpu() = default;
+  GPU();
+  ~GPU() = default;
 
   uint32_t status();
+  void gp0(uint32_t p_val);
+
+  void gp0_draw_mode(uint32_t p_val);
 };

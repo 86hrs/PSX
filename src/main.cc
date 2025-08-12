@@ -1,5 +1,6 @@
 #include "bios.h"
 #include "cpu.h"
+#include "gpu.h"
 #include "interconnect.h"
 #include "ram.h"
 #include "dma.h"
@@ -8,7 +9,8 @@ int main(void) {
     Bios bios("SCPH1001.BIN");
     RAM ram;
     Dma dma;
-    Interconnect inter(&bios, &ram, &dma);
+    GPU gpu;
+    Interconnect inter(&bios, &ram, &dma, &gpu);
     CPU* cpu = new CPU(&inter);
 
     cpu->run();
