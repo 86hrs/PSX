@@ -92,17 +92,6 @@ struct GPU {
   bool interrupt;
   DmaDirection dma_direction;  
 
-  GPU();
-  ~GPU() = default;
-
-  uint32_t status();
-  void gp0(uint32_t p_val);
-  void gp1(uint32_t p_val);
-
-  void gp0_draw_mode(uint32_t p_val);
-
-  void gp1_reset(uint32_t p_val);
-
   uint8_t texture_window_x_mask;
   uint8_t texture_window_y_mask;
   uint8_t texture_window_x_offset;
@@ -124,4 +113,18 @@ struct GPU {
 
   uint16_t display_line_start;
   uint16_t display_line_end;
+
+  GPU();
+  ~GPU() = default;
+
+  uint32_t status();
+  void gp0(uint32_t p_val);
+  void gp1(uint32_t p_val);
+
+  void gp0_draw_mode(uint32_t p_val);
+
+  void gp1_reset(uint32_t p_val);
+  void gp1_display_mode(uint32_t p_val);
+
+  uint32_t read();
 };

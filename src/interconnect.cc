@@ -371,8 +371,7 @@ uint32_t Interconnect::load32(uint32_t p_addr) {
 
     if (auto offset = map::GPU_GP0.contains(p_addr);
         offset.has_value()) {
-        printf("GPU0 read at: 0x%x\n", p_addr);
-        return 0x0;
+        this->gpu->read();
     }
     // DMA
     if (auto offset = map::DMA.contains(p_addr);

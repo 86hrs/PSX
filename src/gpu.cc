@@ -113,8 +113,11 @@ void GPU::gp1(uint32_t p_val) {
     case 0x0:
       this->gp1_reset(p_val);
       break;
+    case 0x8:
+      this->gp1_display_mode(p_val);
+      break;
     default:
-        printf("Unhandled GP0 command: 0x%x\n", p_val);
+        printf("Unhandled GP1 command: 0x%x\n", p_val);
         std::terminate();
     }
 }
@@ -183,4 +186,37 @@ void GPU::gp1_reset(uint32_t p_val) {
     this->display_horiz_end = 0xc00;
     this->display_line_start = 0x10;
     this->display_line_end = 0x100;
+}
+
+void GPU::gp1_display_mode(uint32_t p_val) {
+    uint8_t hr1 = uint8_t(p_val & 3);
+    uint8_t hr2 = uint8_t((p_val >> 6) & 1);
+
+    this->hres = HorizontalRes::from_fields(hr1, hr2);
+
+    if((p_val & 0x4) != 0) 
+        this->vres = VerticalRes::Y240Lines;
+    else
+        this->vres = VerticalRes::Y480Lines;
+
+    if((p_val & 0x8) != 0)
+        this->vmode = VMode::Ntsc;
+    else
+        this->vmode = VMode::Pal;
+
+    if((p_val & 0x10) != 0)
+        this->display_depth = DisplayDepth::D24Bits;
+    else
+        this->display_depth = DisplayDepth::D15Bits;
+
+    this->interlaced = (p_val & 0x20) != 0;
+
+    if((p_val & 0x80) != 0) {
+        printf("Unsupported_display_mode: 0x%x\n", p_val);
+        std::terminate();
+    }
+}
+
+uint32_t GPU::read() {
+    return 0;
 }
