@@ -295,6 +295,11 @@ void Interconnect::store32(uint32_t p_addr, uint32_t p_val) {
         this->gpu->gp0(p_val);
         return;
     }
+    if (auto offset = map::GPU_GP1.contains(p_addr);
+        offset.has_value()) {
+        this->gpu->gp1(p_val);
+        return;
+    }
     // TIMER
     if (auto offset = map::TIMER_1.contains(p_addr);
         offset.has_value()) {

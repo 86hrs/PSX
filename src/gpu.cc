@@ -23,6 +23,23 @@ GPU::GPU() {
     this->display_disabled = true;
     this->interrupt = false;
     this->dma_direction = DmaDirection::Off;
+
+    this->texture_window_x_mask = 0 ;
+    this->texture_window_y_mask = 0 ;
+    this->texture_window_x_offset = 0;
+    this->texture_window_y_offset = 0;
+    this->drawing_area_left = 0;
+    this->drawing_area_top = 0;
+    this->drawing_area_right = 0;
+    this->drawing_area_bottom = 0 ;
+    this->drawing_x_offset = 0;
+    this->drawing_y_offset = 0;
+    this->display_vram_x_start = 0;
+    this->display_vram_y_start = 0;
+    this->display_horiz_start = 0x200;
+    this->display_horiz_end = 0xc00;
+    this->display_line_start = 0x10;
+    this->display_line_end = 0x100;
 }
 
 uint32_t GPU::status() {
@@ -77,9 +94,25 @@ void GPU::gp0(uint32_t p_val) {
     uint32_t opcode = (p_val >> 24) & 0xff;
 
     switch (opcode) {
+    // NOP
+    case 0x0:
+        break;
     case 0xe1:
         this->gp0_draw_mode(p_val);
         break;
+    default:
+        printf("Unhandled GP0 command: 0x%x\n", p_val);
+        std::terminate();
+    }
+}
+void GPU::gp1(uint32_t p_val) {
+    uint32_t opcode = (p_val >> 24) & 0xff;
+
+    switch (opcode) {
+    // SOFT RESET
+    case 0x0:
+      this->gp1_reset(p_val);
+      break;
     default:
         printf("Unhandled GP0 command: 0x%x\n", p_val);
         std::terminate();
@@ -112,4 +145,42 @@ void GPU::gp0_draw_mode(uint32_t p_val) {
     this->texture_disable = ((p_val >> 11) & 1) != 0;
     this->rectangle_texture_x_flip = ((p_val >> 12) & 1) != 0;
     this->rectangle_texture_y_flip = ((p_val >> 13) & 1) != 0;
+}
+
+void GPU::gp1_reset(uint32_t p_val) {
+    this->interrupt = false ;
+    this->page_base_x = 0;
+    this->page_base_y = 0;
+    this->semi_transparency = 0;
+    this->texture_depth = TextureDepth::T4Bit;
+    this->texture_window_x_mask = 0 ;
+    this->texture_window_y_mask = 0 ;
+    this->texture_window_x_offset = 0;
+    this->texture_window_y_offset = 0;
+    this->dithering = false ;
+    this->draw_to_display = false;
+    this->texture_disable = false;
+    this->rectangle_texture_x_flip = false;
+    this->rectangle_texture_y_flip = false;
+    this->drawing_area_left = 0;
+    this->drawing_area_top = 0;
+    this->drawing_area_right = 0;
+    this->drawing_area_bottom = 0 ;
+    this->drawing_x_offset = 0;
+    this->drawing_y_offset = 0;
+    this->force_set_mask_bit = false;
+    this->preserve_masked_pixels = false;
+    this->dma_direction = DmaDirection::Off;
+    this->display_disabled = true;
+    this->hres = HorizontalRes::from_fields(0, 0);
+    this->vres = VerticalRes::Y240Lines;
+    this->vmode = VMode::Ntsc;
+    this->interlaced = true;
+    this->display_depth = DisplayDepth::D15Bits;
+    this->display_vram_x_start = 0;
+    this->display_vram_y_start = 0;
+    this->display_horiz_start = 0x200;
+    this->display_horiz_end = 0xc00;
+    this->display_line_start = 0x10;
+    this->display_line_end = 0x100;
 }

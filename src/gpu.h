@@ -97,6 +97,31 @@ struct GPU {
 
   uint32_t status();
   void gp0(uint32_t p_val);
+  void gp1(uint32_t p_val);
 
   void gp0_draw_mode(uint32_t p_val);
+
+  void gp1_reset(uint32_t p_val);
+
+  uint8_t texture_window_x_mask;
+  uint8_t texture_window_y_mask;
+  uint8_t texture_window_x_offset;
+  uint8_t texture_window_y_offset;
+
+  uint16_t drawing_area_left;
+  uint16_t drawing_area_top;
+  uint16_t drawing_area_right;
+  uint16_t drawing_area_bottom;
+
+  int16_t drawing_x_offset;
+  int16_t drawing_y_offset;
+
+  uint16_t display_vram_x_start;
+  uint16_t display_vram_y_start;
+
+  uint16_t display_horiz_start;
+  uint16_t display_horiz_end;
+
+  uint16_t display_line_start;
+  uint16_t display_line_end;
 };
