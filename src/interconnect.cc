@@ -49,7 +49,7 @@ void Interconnect::do_dma_linked_list(Port p_port) {
         while (remsz > 0) {
             addr = (addr + 4) & 0x1ffffc;
             uint32_t command = this->ram->load32(addr);
-            printf("GPU command: 0x%x\n", command);
+            this->gpu->gp0(command);
             remsz -= 1;
         }
         if ((header & 0x800000) != 0) {

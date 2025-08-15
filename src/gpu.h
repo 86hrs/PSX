@@ -122,9 +122,11 @@ struct GPU {
   void gp1(uint32_t p_val);
 
   void gp0_draw_mode(uint32_t p_val);
+  void gp0_drawing_area_top_left(uint32_t p_val);
 
   void gp1_reset(uint32_t p_val);
   void gp1_display_mode(uint32_t p_val);
+  void gp1_dma_direction(uint32_t p_val);
 
   uint32_t read();
 };

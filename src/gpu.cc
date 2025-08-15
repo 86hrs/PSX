@@ -116,6 +116,9 @@ void GPU::gp1(uint32_t p_val) {
     case 0x8:
       this->gp1_display_mode(p_val);
       break;
+    case 0x4:
+      this->gp1_dma_direction(p_val);
+      break;
     default:
         printf("Unhandled GP1 command: 0x%x\n", p_val);
         std::terminate();
@@ -214,6 +217,26 @@ void GPU::gp1_display_mode(uint32_t p_val) {
     if((p_val & 0x80) != 0) {
         printf("Unsupported_display_mode: 0x%x\n", p_val);
         std::terminate();
+    }
+}
+
+void GPU::gp1_dma_direction(uint32_t p_val) {
+    switch(p_val & 3) {
+        case 0:
+            this->dma_direction = DmaDirection::Off;
+            break;
+        case 1:
+            this->dma_direction = DmaDirection::Fifo;
+            break;
+        case 2:
+            this->dma_direction = DmaDirection::CpuToGp0;
+            break;
+        case 3:
+            this->dma_direction = DmaDirection::VRamToCpu;
+            break;
+        default:
+            printf("ERROR: Wrong gp_1_dma_direction: %d\n", p_val & 3);
+            std::terminate();
     }
 }
 
