@@ -24,14 +24,14 @@ GPU::GPU() {
     this->interrupt = false;
     this->dma_direction = DmaDirection::Off;
 
-    this->texture_window_x_mask = 0 ;
-    this->texture_window_y_mask = 0 ;
+    this->texture_window_x_mask = 0;
+    this->texture_window_y_mask = 0;
     this->texture_window_x_offset = 0;
     this->texture_window_y_offset = 0;
     this->drawing_area_left = 0;
     this->drawing_area_top = 0;
     this->drawing_area_right = 0;
-    this->drawing_area_bottom = 0 ;
+    this->drawing_area_bottom = 0;
     this->drawing_x_offset = 0;
     this->drawing_y_offset = 0;
     this->display_vram_x_start = 0;
@@ -100,6 +100,15 @@ void GPU::gp0(uint32_t p_val) {
     case 0xe1:
         this->gp0_draw_mode(p_val);
         break;
+    case 0xe3:
+        this->gp0_drawing_area_top_left(p_val);
+        break;
+    case 0xe4:
+        this->gp0_drawing_area_bottom_right(p_val);
+        break;
+    case 0xe5:
+        this->gp0_drawing_offset(p_val);
+        break;
     default:
         printf("Unhandled GP0 command: 0x%x\n", p_val);
         std::terminate();
@@ -109,20 +118,37 @@ void GPU::gp1(uint32_t p_val) {
     uint32_t opcode = (p_val >> 24) & 0xff;
 
     switch (opcode) {
-    // SOFT RESET
     case 0x0:
-      this->gp1_reset(p_val);
-      break;
+        this->gp1_reset(p_val);
+        break;
     case 0x8:
-      this->gp1_display_mode(p_val);
-      break;
+        this->gp1_display_mode(p_val);
+        break;
     case 0x4:
-      this->gp1_dma_direction(p_val);
-      break;
+        this->gp1_dma_direction(p_val);
+        break;
     default:
         printf("Unhandled GP1 command: 0x%x\n", p_val);
         std::terminate();
     }
+}
+
+void GPU::gp0_drawing_area_top_left(uint32_t p_val) {
+    this->drawing_area_top = uint16_t((p_val >> 10) & 0x3ff);
+    this->drawing_area_left = uint16_t(p_val & 0x3ff);
+}
+
+void GPU::gp0_drawing_area_bottom_right(uint32_t p_val) {
+    this->drawing_area_bottom = uint16_t((p_val >> 10) & 0x3ff);
+    this->drawing_area_right = uint16_t(p_val & 0x3ff);
+}
+
+void GPU::gp0_drawing_offset(uint32_t p_val) {
+    uint16_t x = uint16_t(p_val & 0x7ff);
+    uint16_t y = uint16_t((p_val >> 11) & 0x7ff);
+
+    this->drawing_x_offset = (int16_t(x << 5)) >> 5;
+    this->drawing_y_offset = (int16_t(y << 5)) >> 5;
 }
 
 void GPU::gp0_draw_mode(uint32_t p_val) {
@@ -154,16 +180,16 @@ void GPU::gp0_draw_mode(uint32_t p_val) {
 }
 
 void GPU::gp1_reset(uint32_t p_val) {
-    this->interrupt = false ;
+    this->interrupt = false;
     this->page_base_x = 0;
     this->page_base_y = 0;
     this->semi_transparency = 0;
     this->texture_depth = TextureDepth::T4Bit;
-    this->texture_window_x_mask = 0 ;
-    this->texture_window_y_mask = 0 ;
+    this->texture_window_x_mask = 0;
+    this->texture_window_y_mask = 0;
     this->texture_window_x_offset = 0;
     this->texture_window_y_offset = 0;
-    this->dithering = false ;
+    this->dithering = false;
     this->draw_to_display = false;
     this->texture_disable = false;
     this->rectangle_texture_x_flip = false;
@@ -171,7 +197,7 @@ void GPU::gp1_reset(uint32_t p_val) {
     this->drawing_area_left = 0;
     this->drawing_area_top = 0;
     this->drawing_area_right = 0;
-    this->drawing_area_bottom = 0 ;
+    this->drawing_area_bottom = 0;
     this->drawing_x_offset = 0;
     this->drawing_y_offset = 0;
     this->force_set_mask_bit = false;
@@ -197,49 +223,45 @@ void GPU::gp1_display_mode(uint32_t p_val) {
 
     this->hres = HorizontalRes::from_fields(hr1, hr2);
 
-    if((p_val & 0x4) != 0) 
+    if ((p_val & 0x4) != 0)
         this->vres = VerticalRes::Y240Lines;
     else
         this->vres = VerticalRes::Y480Lines;
 
-    if((p_val & 0x8) != 0)
+    if ((p_val & 0x8) != 0)
         this->vmode = VMode::Ntsc;
     else
         this->vmode = VMode::Pal;
 
-    if((p_val & 0x10) != 0)
+    if ((p_val & 0x10) != 0)
         this->display_depth = DisplayDepth::D24Bits;
     else
         this->display_depth = DisplayDepth::D15Bits;
 
     this->interlaced = (p_val & 0x20) != 0;
 
-    if((p_val & 0x80) != 0) {
+    if ((p_val & 0x80) != 0) {
         printf("Unsupported_display_mode: 0x%x\n", p_val);
         std::terminate();
     }
 }
 
 void GPU::gp1_dma_direction(uint32_t p_val) {
-    switch(p_val & 3) {
-        case 0:
-            this->dma_direction = DmaDirection::Off;
-            break;
-        case 1:
-            this->dma_direction = DmaDirection::Fifo;
-            break;
-        case 2:
-            this->dma_direction = DmaDirection::CpuToGp0;
-            break;
-        case 3:
-            this->dma_direction = DmaDirection::VRamToCpu;
-            break;
-        default:
-            printf("ERROR: Wrong gp_1_dma_direction: %d\n", p_val & 3);
-            std::terminate();
+    static constexpr DmaDirection directions[] = {
+        DmaDirection::Off,
+        DmaDirection::Fifo,
+        DmaDirection::CpuToGp0,
+        DmaDirection::VRamToCpu
+    };
+    
+    const uint32_t index = p_val & 3;
+
+    if (index < sizeof(directions)) {
+        this->dma_direction = directions[index];
+    } else {
+        printf("ERROR: Wrong gp_1_dma_direction: %d\n", index);
+        std::terminate();
     }
 }
 
-uint32_t GPU::read() {
-    return 0;
-}
+uint32_t GPU::read() { return 0; }
