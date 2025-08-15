@@ -109,6 +109,9 @@ void GPU::gp0(uint32_t p_val) {
     case 0xe5:
         this->gp0_drawing_offset(p_val);
         break;
+    case 0xe2:
+        this->gp0_texture_window(p_val);
+        break;
     default:
         printf("Unhandled GP0 command: 0x%x\n", p_val);
         std::terminate();
@@ -131,6 +134,13 @@ void GPU::gp1(uint32_t p_val) {
         printf("Unhandled GP1 command: 0x%x\n", p_val);
         std::terminate();
     }
+}
+
+void GPU::gp0_texture_window(uint32_t p_val) {
+    this->texture_window_x_mask = uint8_t(p_val & 0x1f);
+    this->texture_window_y_mask = uint8_t((p_val >> 5) & 0x1f);
+    this->texture_window_x_offset = uint8_t((p_val >> 10) & 0x1f);
+    this->texture_window_y_offset = uint8_t((p_val >> 15) & 0x1f);
 }
 
 void GPU::gp0_drawing_area_top_left(uint32_t p_val) {
