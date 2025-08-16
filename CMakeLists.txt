@@ -30,6 +30,8 @@ add_executable(${PROJECT_NAME}
     src/gpu.cc
     src/r3000d.h
     src/r3000d.c
+    src/commandbuffer.h
+    src/commandbuffer.cc
 )
 
 set_target_properties(${PROJECT_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)

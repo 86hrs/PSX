@@ -126,10 +126,14 @@ struct GPU {
   void gp0_drawing_area_bottom_right(uint32_t p_val);
   void gp0_drawing_offset(uint32_t p_val);
   void gp0_texture_window(uint32_t p_val);
+  void gp0_mask_bit_setting(uint32_t p_val);
 
   void gp1_reset(uint32_t p_val);
   void gp1_display_mode(uint32_t p_val);
   void gp1_dma_direction(uint32_t p_val);
+  void gp1_display_vram_start(uint32_t p_val);
+  void gp1_display_horizontal_range(uint32_t p_val);
+  void gp1_display_vertical_range(uint32_t p_val);
 
   uint32_t read();
 };
