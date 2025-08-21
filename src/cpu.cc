@@ -583,7 +583,7 @@ void CPU::op_nor(Instruction p_instruction) {
     uint32_t s = p_instruction.s();
     uint32_t t = p_instruction.t();
 
-    uint32_t v = !(this->get_reg(s) | this->get_reg(t));
+    uint32_t v = ~(this->get_reg(s) | this->get_reg(t));
 
     this->set_reg(d, v);
 }

@@ -115,9 +115,9 @@ void Interconnect::do_dma_block(Port p_port) {
                     src_word = (addr - 4) & 0x1FFFFF;
                 break;
             default:
-                printf("Unhandled DMA source port %d",
+                printf("ERROR: Unhandled DMA source port %d\n",
                        (uint8_t)p_port);
-                std::terminate();
+                std::exit(1);
             }
 
             this->ram->store32(cur_addr, src_word);
@@ -125,7 +125,7 @@ void Interconnect::do_dma_block(Port p_port) {
         }
         default:
             printf("ERROR: Unknown DMA direction");
-            std::terminate();
+            std::exit(1);
         }
 
         addr += increment;
@@ -366,7 +366,7 @@ uint32_t Interconnect::load32(uint32_t p_addr) {
     // GPU
     if (auto offset = map::GPU_GP1.contains(p_addr);
         offset.has_value()) {
-        return 0x1C000000;
+        return 0x1c000000;
     }
 
     if (auto offset = map::GPU_GP0.contains(p_addr);

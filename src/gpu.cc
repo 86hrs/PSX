@@ -1,9 +1,11 @@
 #include "gpu.h"
 #include "commandbuffer.h"
+#include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <exception>
 
-GPU::GPU(CommmandBuffer* p_commandbuffer) {
+GPU::GPU(CommmandBuffer *p_commandbuffer) {
     this->page_base_x = 0;
     this->page_base_y = 0;
     this->semi_transparency = 0;
@@ -63,7 +65,7 @@ uint32_t GPU::status() {
     r |= (uint32_t(this->field)) << 13;
     r |= (uint32_t(this->texture_disable)) << 15;
     r |= this->hres.into_status();
-    r |= (uint32_t(this->vres)) << 19;
+    // r |= (uint32_t(this->vres)) << 19;
     r |= (uint32_t(this->vmode)) << 20;
     r |= (uint32_t(this->display_depth)) << 21;
     r |= (uint32_t(this->interlaced)) << 22;
@@ -105,6 +107,10 @@ void GPU::gp0(uint32_t p_val) {
         void (GPU::*method)(void) = nullptr;
 
         switch (opcode) {
+        case 0xc0:
+            method = &GPU::gp0_image_store;
+            len = 3;
+            break;
         case 0xa0:
             len = 3;
             method = &GPU::gp0_image_load;
@@ -148,20 +154,22 @@ void GPU::gp0(uint32_t p_val) {
             break;
         default:
             printf("Unhandled GP0 command: 0x%x\n", p_val);
-            std::terminate();
+            std::exit(1);
         }
         this->gp0_command_remaining = len;
         this->gp0_command_ptr = method;
         this->gp0_command->clear();
     }
+
     this->gp0_command_remaining -= 1;
 
-    if (this->gp0_mode == Gp0Mode::Command) {
+    switch (this->gp0_mode) {
+    case Gp0Mode::Command:
         this->gp0_command->push_word(p_val);
         if (this->gp0_command_remaining == 0)
             (this->*gp0_command_ptr)();
-    } else if (this->gp0_mode == Gp0Mode::ImageLoad) {
-        // XXX Should copy pixel data to VRAM
+        break;
+    case Gp0Mode::ImageLoad:
         if (this->gp0_command_remaining == 0)
             this->gp0_mode = Gp0Mode::Command;
     }
@@ -170,6 +178,9 @@ void GPU::gp1(uint32_t p_val) {
     uint32_t opcode = (p_val >> 24) & 0xff;
 
     switch (opcode) {
+    case 0x03:
+        this->gp1_display_enable(p_val);
+        break;
     case 0x0:
         this->gp1_reset(p_val);
         break;
@@ -207,13 +218,21 @@ void GPU::gp0_image_load() {
     // If we hae an odd number of pixels we must round up
     // since we transfer 32bits at a time. There'll be 16bits
     // of padding in the last word.
-    imgsize = (imgsize + 1) & !1;
+    imgsize = (imgsize + 1) & ~1;
 
     // Store number of words expected for this image
     this->gp0_command_remaining = imgsize / 2;
 
     // Put the GP0 state machine in ImageLoad mode
     this->gp0_mode = Gp0Mode::ImageLoad;
+}
+
+void GPU::gp0_image_store() {
+    uint32_t res = (*this->gp0_command)[2];
+
+    uint16_t width = res & 0xffff;
+    uint16_t height = res >> 16;
+    printf("Unhandled image store: %dx%d\n", width, height);
 }
 
 void GPU::gp0_texture_window() {
@@ -286,6 +305,10 @@ void GPU::gp0_draw_mode() {
     this->texture_disable = ((p_val >> 11) & 1) != 0;
     this->rectangle_texture_x_flip = ((p_val >> 12) & 1) != 0;
     this->rectangle_texture_y_flip = ((p_val >> 13) & 1) != 0;
+}
+
+void GPU::gp1_display_enable(uint32_t p_val) {
+    this->display_disabled = (p_val & 1) != 0;
 }
 
 void GPU::gp1_reset(uint32_t p_val) {

@@ -151,8 +151,10 @@ struct GPU {
     void gp0_nop();
     void gp0_clear_cache();
     void gp0_image_load();
+    void gp0_image_store();
 
     void gp1_reset(uint32_t p_val);
+    void gp1_display_enable(uint32_t p_val);
     void gp1_display_mode(uint32_t p_val);
     void gp1_dma_direction(uint32_t p_val);
     void gp1_display_vram_start(uint32_t p_val);
