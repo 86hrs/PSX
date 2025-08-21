@@ -4,12 +4,14 @@
 #include "interconnect.h"
 #include "ram.h"
 #include "dma.h"
+#include "commandbuffer.h"
 
 int main(void) {
     Bios bios("SCPH1001.BIN");
     RAM ram;
     Dma dma;
-    GPU gpu;
+    CommmandBuffer cb;
+    GPU gpu(&cb);
     Interconnect inter(&bios, &ram, &dma, &gpu);
     CPU* cpu = new CPU(&inter);
 

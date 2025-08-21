@@ -93,7 +93,7 @@ void Interconnect::do_dma_block(Port p_port) {
         case Direction::FromRam: {
             uint32_t src_word = this->ram->load32(cur_addr);
             if (p_port == Port::Gpu) {
-                printf("GPU data: 0x%x\n", src_word);
+                this->gpu->gp0(src_word);
             } else {
                 printf("Unhandled DMA destination port: %d\n",
                        p_port);
@@ -106,14 +106,13 @@ void Interconnect::do_dma_block(Port p_port) {
 
             switch (p_port) {
             case Port::Otc:
-                if (remsz == 1) {
+                if (remsz == 1)
                     // Last word: end of ordering table
                     // marker
                     src_word = 0x00FFFFFF;
-                } else {
+                else
                     // Otherwise: pointer to previous entry
                     src_word = (addr - 4) & 0x1FFFFF;
-                }
                 break;
             default:
                 printf("Unhandled DMA source port %d",
@@ -228,7 +227,8 @@ void Interconnect::store16(uint32_t p_addr, uint16_t p_val) {
     // IQR
     if (auto offset = map::IQR_CONTROL.contains(addr);
         offset.has_value()) {
-        printf("Unhandled store16 to IQR register: 0x%x\n", addr);
+        printf("Unhandled store16 to IQR register: 0x%x\n",
+               addr);
         return;
     }
 

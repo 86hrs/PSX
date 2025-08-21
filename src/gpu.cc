@@ -1,8 +1,9 @@
 #include "gpu.h"
+#include "commandbuffer.h"
 #include <cstdio>
 #include <exception>
 
-GPU::GPU() {
+GPU::GPU(CommmandBuffer* p_commandbuffer) {
     this->page_base_x = 0;
     this->page_base_y = 0;
     this->semi_transparency = 0;
@@ -40,6 +41,12 @@ GPU::GPU() {
     this->display_horiz_end = 0xc00;
     this->display_line_start = 0x10;
     this->display_line_end = 0x100;
+
+    this->gp0_command_remaining = 0;
+    this->gp0_command_ptr = nullptr;
+    this->gp0_command = p_commandbuffer;
+
+    this->gp0_mode = Gp0Mode::Command;
 }
 
 uint32_t GPU::status() {
@@ -91,33 +98,72 @@ uint32_t GPU::status() {
 }
 
 void GPU::gp0(uint32_t p_val) {
-    uint32_t opcode = (p_val >> 24) & 0xff;
+    if (this->gp0_command_remaining == 0) {
+        uint32_t opcode = (p_val >> 24) & 0xff;
 
-    switch (opcode) {
-    // NOP
-    case 0x0:
-        break;
-    case 0xe1:
-        this->gp0_draw_mode(p_val);
-        break;
-    case 0xe2:
-        this->gp0_texture_window(p_val);
-        break;
-    case 0xe3:
-        this->gp0_drawing_area_top_left(p_val);
-        break;
-    case 0xe4:
-        this->gp0_drawing_area_bottom_right(p_val);
-        break;
-    case 0xe5:
-        this->gp0_drawing_offset(p_val);
-        break;
-    case 0xe6:
-        this->gp0_mask_bit_setting(p_val);
-        break;
-    default:
-        printf("Unhandled GP0 command: 0x%x\n", p_val);
-        std::terminate();
+        uint32_t len = 0;
+        void (GPU::*method)(void) = nullptr;
+
+        switch (opcode) {
+        case 0xa0:
+            len = 3;
+            method = &GPU::gp0_image_load;
+            break;
+        case 0x01:
+            len = 1;
+            method = &GPU::gp0_clear_cache;
+            break;
+        case 0x28:
+            len = 5;
+            method = &GPU::gp0_quad_mono_opaque;
+            break;
+        // NOP
+        case 0x0:
+            len = 1;
+            method = &GPU::gp0_nop;
+            break;
+        case 0xe1:
+            len = 1;
+            method = &GPU::gp0_draw_mode;
+            break;
+        case 0xe2:
+            len = 1;
+            method = &GPU::gp0_texture_window;
+            break;
+        case 0xe3:
+            len = 1;
+            method = &GPU::gp0_drawing_area_top_left;
+            break;
+        case 0xe4:
+            len = 1;
+            method = &GPU::gp0_drawing_area_bottom_right;
+            break;
+        case 0xe5:
+            len = 1;
+            method = &GPU::gp0_drawing_offset;
+            break;
+        case 0xe6:
+            len = 1;
+            method = &GPU::gp0_mask_bit_setting;
+            break;
+        default:
+            printf("Unhandled GP0 command: 0x%x\n", p_val);
+            std::terminate();
+        }
+        this->gp0_command_remaining = len;
+        this->gp0_command_ptr = method;
+        this->gp0_command->clear();
+    }
+    this->gp0_command_remaining -= 1;
+
+    if (this->gp0_mode == Gp0Mode::Command) {
+        this->gp0_command->push_word(p_val);
+        if (this->gp0_command_remaining == 0)
+            (this->*gp0_command_ptr)();
+    } else if (this->gp0_mode == Gp0Mode::ImageLoad) {
+        // XXX Should copy pixel data to VRAM
+        if (this->gp0_command_remaining == 0)
+            this->gp0_mode = Gp0Mode::Command;
     }
 }
 void GPU::gp1(uint32_t p_val) {
@@ -148,7 +194,30 @@ void GPU::gp1(uint32_t p_val) {
     }
 }
 
-void GPU::gp0_texture_window(uint32_t p_val) {
+void GPU::gp0_image_load() {
+    // Parameters 2 contaains the image resolution
+    uint32_t res = (*this->gp0_command)[2];
+
+    uint16_t width = res & 0xffff;
+    uint16_t height = res >> 16;
+
+    // Size of the image in 16bit pixels
+    uint16_t imgsize = width * height;
+
+    // If we hae an odd number of pixels we must round up
+    // since we transfer 32bits at a time. There'll be 16bits
+    // of padding in the last word.
+    imgsize = (imgsize + 1) & !1;
+
+    // Store number of words expected for this image
+    this->gp0_command_remaining = imgsize / 2;
+
+    // Put the GP0 state machine in ImageLoad mode
+    this->gp0_mode = Gp0Mode::ImageLoad;
+}
+
+void GPU::gp0_texture_window() {
+    uint32_t p_val = (*this->gp0_command)[0];
     this->texture_window_x_mask = uint8_t(p_val & 0x1f);
     this->texture_window_y_mask = uint8_t((p_val >> 5) & 0x1f);
     this->texture_window_x_offset =
@@ -157,17 +226,20 @@ void GPU::gp0_texture_window(uint32_t p_val) {
         uint8_t((p_val >> 15) & 0x1f);
 }
 
-void GPU::gp0_drawing_area_top_left(uint32_t p_val) {
+void GPU::gp0_drawing_area_top_left() {
+    uint32_t p_val = (*this->gp0_command)[0];
     this->drawing_area_top = uint16_t((p_val >> 10) & 0x3ff);
     this->drawing_area_left = uint16_t(p_val & 0x3ff);
 }
 
-void GPU::gp0_drawing_area_bottom_right(uint32_t p_val) {
+void GPU::gp0_drawing_area_bottom_right() {
+    uint32_t p_val = (*this->gp0_command)[0];
     this->drawing_area_bottom = uint16_t((p_val >> 10) & 0x3ff);
     this->drawing_area_right = uint16_t(p_val & 0x3ff);
 }
 
-void GPU::gp0_drawing_offset(uint32_t p_val) {
+void GPU::gp0_drawing_offset() {
+    uint32_t p_val = (*this->gp0_command)[0];
     uint16_t x = uint16_t(p_val & 0x7ff);
     uint16_t y = uint16_t((p_val >> 11) & 0x7ff);
 
@@ -175,12 +247,20 @@ void GPU::gp0_drawing_offset(uint32_t p_val) {
     this->drawing_y_offset = (int16_t(y << 5)) >> 5;
 }
 
-void GPU::gp0_mask_bit_setting(uint32_t p_val) {
+void GPU::gp0_mask_bit_setting() {
+    uint32_t p_val = (*this->gp0_command)[0];
     this->force_set_mask_bit = (p_val & 1) != 0;
     this->preserve_masked_pixels = (p_val & 2) != 0;
 }
 
-void GPU::gp0_draw_mode(uint32_t p_val) {
+void GPU::gp0_clear_cache() { printf("GP0: Clear cache\n"); }
+
+void GPU::gp0_nop() { return; }
+
+void GPU::gp0_quad_mono_opaque() { printf("GP0: Draw quad\n"); }
+
+void GPU::gp0_draw_mode() {
+    uint32_t p_val = (*this->gp0_command)[0];
     this->page_base_x = uint8_t(p_val & 0xf);
     this->page_base_y = uint8_t((p_val >> 4) & 1);
     this->semi_transparency = uint8_t((p_val >> 5) & 3);
