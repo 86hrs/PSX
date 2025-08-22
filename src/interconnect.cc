@@ -368,7 +368,9 @@ uint32_t Interconnect::load32(uint32_t p_addr) {
         offset.has_value()) {
         return 0x1c000000;
     }
-
+    if (auto offset = map::JOY_RX_DATA.contains(p_addr); offset.has_value()) {
+        return 0;
+    }
     if (auto offset = map::GPU_GP0.contains(p_addr);
         offset.has_value()) {
         this->gpu->read();

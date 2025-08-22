@@ -44,4 +44,7 @@ const Range TIMER_2(0x1f801120, 0x10);
 // Expansion regions
 const Range EXPANSION_1(0x1f000084, 1);
 const Range EXPANSION_2(0x1f802000, 66);
+
+// JOYPAD
+const Range JOY_RX_DATA(0x1f801110, 1);
 } // namespace map
