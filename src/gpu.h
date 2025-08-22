@@ -147,19 +147,26 @@ struct GPU {
     void gp0_drawing_offset();
     void gp0_texture_window();
     void gp0_mask_bit_setting();
-    void gp0_quad_mono_opaque();
     void gp0_nop();
     void gp0_clear_cache();
     void gp0_image_load();
     void gp0_image_store();
 
+    void gp0_quad_mono_opaque();
+    void gp0_quad_shaded_opaque();
+    void gp0_triangle_shaded_opaque();
+    void gp0_quad_texture_blend_opaque();
+
+
     void gp1_reset(uint32_t p_val);
+    void gp1_acknowledge_irq();
     void gp1_display_enable(uint32_t p_val);
     void gp1_display_mode(uint32_t p_val);
     void gp1_dma_direction(uint32_t p_val);
     void gp1_display_vram_start(uint32_t p_val);
     void gp1_display_horizontal_range(uint32_t p_val);
     void gp1_display_vertical_range(uint32_t p_val);
+    void gp1_reset_command_buffer();
 
     uint32_t read();
 };
