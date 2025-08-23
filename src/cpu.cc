@@ -1090,7 +1090,5 @@ void CPU::execute_instruction(Instruction p_instruction) {
         this->op_illegal(p_instruction);
 }
 void CPU::run() {
-    while (true) {
-        this->run_next_instruction();
-    }
+    this->run_next_instruction();
 }

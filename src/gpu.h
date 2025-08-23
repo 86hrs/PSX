@@ -127,11 +127,11 @@ struct GPU {
     uint16_t display_line_start;
     uint16_t display_line_end;
 
-    GPU(CommmandBuffer*);
+    GPU(CommmandBuffer *);
     ~GPU() = default;
 
     // Buffer containing the current GP0 command
-    CommmandBuffer* gp0_command;
+    CommmandBuffer *gp0_command;
     // Remaining words for the current GP0 command
     uint32_t gp0_command_remaining;
     // Pointer to the method implementing the current GPX commnad
@@ -156,7 +156,6 @@ struct GPU {
     void gp0_quad_shaded_opaque();
     void gp0_triangle_shaded_opaque();
     void gp0_quad_texture_blend_opaque();
-
 
     void gp1_reset(uint32_t p_val);
     void gp1_acknowledge_irq();
