@@ -1,6 +1,11 @@
 #pragma once
 #include "commandbuffer.h"
+#include "glm/ext/vector_float2.hpp"
+#include "glm/ext/vector_float3.hpp"
 #include <cstdint>
+
+glm::vec2 pos_from_gp0(uint32_t p_val);
+glm::vec3 col_from_gp0(uint32_t p_val);
 
 /// Depth of the pixel values in a texture page
 enum TextureDepth : uint32_t {
