@@ -79,6 +79,8 @@ add_executable(${PROJECT_NAME}
     src/glad.h
     src/glad.c
     src/khrplatform.h
+    src/shader.h
+    src/shader.cc
     ${IMGUI_SOURCES}
 )
 

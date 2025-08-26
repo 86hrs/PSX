@@ -11,6 +11,7 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "shader.h"
 
 int main(void) {
     Bios bios("SCPH1001.BIN");
@@ -58,6 +59,8 @@ int main(void) {
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 410 core");
+
+    Shader prg = Shader("vertex.glsl", "fragment.glsl");
 
     while (!glfwWindowShouldClose(window)) {
         glClearColor(119.0f / 255.0f, 168.0f / 255.0f, 1.0f,
