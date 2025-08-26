@@ -81,6 +81,8 @@ add_executable(${PROJECT_NAME}
     src/khrplatform.h
     src/shader.h
     src/shader.cc
+    src/renderer.h
+    src/renderer.cc
     ${IMGUI_SOURCES}
 )
 

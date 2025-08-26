@@ -2,19 +2,20 @@
 #include "commandbuffer.h"
 #include "glm/ext/vector_float2.hpp"
 #include "glm/ext/vector_float3.hpp"
+#include "renderer.h"
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
 
-glm::vec2 pos_from_gp0(uint32_t p_val) {
+glm::vec2 GPU::pos_from_gp0(uint32_t p_val) {
     glm::vec2 pos {0, 0};
     pos.x = (int16_t)p_val;
     pos.y = int16_t(p_val >> 16);
 
     return pos;
 }
-glm::vec3 col_from_gp0(uint32_t p_val) {
+glm::vec3 GPU::col_from_gp0(uint32_t p_val) {
     glm::vec3 color;
     color.x = uint8_t(p_val);
     color.y = uint8_t(p_val >> 8);
