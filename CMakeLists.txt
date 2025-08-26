@@ -100,11 +100,35 @@ target_link_libraries(${PROJECT_NAME}
     ${FREETYPE_LIBRARIES}
 )
 
-# set_target_properties(${PROJECT_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
-# target_compile_options(${PROJECT_NAME} PRIVATE
-#     -O3
-#     -march=native
-#     -flto
-#     -fno-rtti             # If you don’t use dynamic_cast or typeid
-# )
+set_target_properties(${PROJECT_NAME} PROPERTIES INTERPROCEDURAL_OPTIMIZATION TRUE)
+target_compile_options(${PROJECT_NAME} PRIVATE
+    -O3
+    -march=native
+    -flto
+    -fno-rtti             # If you don’t use dynamic_cast or typeid
+)
+
+
+# Shader files setup
+set(SHADER_FILES
+    ${CMAKE_SOURCE_DIR}/src/vertex.glsl
+    ${CMAKE_SOURCE_DIR}/src/fragment.glsl
+)
+
+# Custom target for copying resources
+add_custom_target(copy_resources ALL
+    COMMENT "Copying shaders and resources to output directory"
+)
+
+foreach(RESOURCE_FILE ${SHADER_FILES})
+    get_filename_component(RESOURCE_FILENAME ${RESOURCE_FILE} NAME)
+    add_custom_command(
+        TARGET copy_resources
+        COMMAND ${CMAKE_COMMAND} -E copy
+        ${RESOURCE_FILE}
+        ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/${RESOURCE_FILENAME}
+    )
+endforeach()
+
+add_dependencies(${PROJECT_NAME} copy_resources)
 
