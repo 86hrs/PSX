@@ -36,6 +36,7 @@ Renderer::Renderer() {
     ImGui_ImplOpenGL3_Init("#version 410 core");
 
     this->program = new Shader("vertex.glsl", "fragment.glsl");
+    this->run();
 }
 
 Renderer::~Renderer() {
