@@ -1,28 +1,10 @@
 #include "gpu.h"
 #include "commandbuffer.h"
-#include "glm/ext/vector_float2.hpp"
-#include "glm/ext/vector_float3.hpp"
 #include "renderer.h"
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
 #include <exception>
-
-glm::vec2 GPU::pos_from_gp0(uint32_t p_val) {
-    glm::vec2 pos {0, 0};
-    pos.x = (int16_t)p_val;
-    pos.y = int16_t(p_val >> 16);
-
-    return pos;
-}
-glm::vec3 GPU::col_from_gp0(uint32_t p_val) {
-    glm::vec3 color;
-    color.x = uint8_t(p_val);
-    color.y = uint8_t(p_val >> 8);
-    color.z = uint8_t(p_val >> 16);
-
-    return color;
-}
 
 GPU::GPU(CommmandBuffer *p_commandbuffer) {
     this->page_base_x = 0;
@@ -314,15 +296,15 @@ void GPU::gp0_clear_cache() { printf("GP0: Clear cache\n"); }
 void GPU::gp0_nop() { return; }
 
 void GPU::gp0_triangle_shaded_opaque() {
-    glm::vec2 position[3] = {
-        pos_from_gp0((*this->gp0_command)[1]),
-        pos_from_gp0((*this->gp0_command)[3]),
-        pos_from_gp0((*this->gp0_command)[5]),
+    Position position[3] = {
+        Position::from_gp0((*this->gp0_command)[1]),
+        Position::from_gp0((*this->gp0_command)[3]),
+        Position::from_gp0((*this->gp0_command)[5]),
     };
-    glm::vec2 colors[3] = {
-        pos_from_gp0((*this->gp0_command)[0]),
-        pos_from_gp0((*this->gp0_command)[2]),
-        pos_from_gp0((*this->gp0_command)[4]),
+    Color colors[3] = {
+        Color::from_gp0((*this->gp0_command)[0]),
+        Color::from_gp0((*this->gp0_command)[2]),
+        Color::from_gp0((*this->gp0_command)[4]),
     };
     // renderer push triangle;
 }

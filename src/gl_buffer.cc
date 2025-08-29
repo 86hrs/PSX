@@ -1,6 +1,7 @@
-#include <glad.h>
-#include <stdexcept>
 #include "gl_buffer.h"
+#include "structs.h"
+#include <stdexcept>
+
 
 template <typename T> Buffer<T>::Buffer() {
     this->object = 0;
@@ -44,3 +45,6 @@ void Buffer<T>::set(uint32_t index, const T &value) {
     }
     map[index] = value;
 }
+
+template class Buffer<Color>;
+template class Buffer<Position>;

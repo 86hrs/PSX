@@ -1,9 +1,9 @@
 #pragma once
-#include <GLFW/glfw3.h>
-#include <OpenGL/gltypes.h>
+#include "glad.h"
+#include "GLFW/glfw3.h"
 
 template<typename T>
-class Buffer {
+struct Buffer {
   GLuint object;
   T* map;
 
@@ -17,5 +17,4 @@ class Buffer {
 
   void set(uint32_t index, const T& value);
   GLuint id() const { return object; };
-  
 };

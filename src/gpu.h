@@ -1,7 +1,5 @@
 #pragma once
 #include "commandbuffer.h"
-#include "glm/ext/vector_float2.hpp"
-#include "glm/ext/vector_float3.hpp"
 #include <cstdint>
 #include "renderer.h"
 
@@ -71,6 +69,11 @@ enum Gp0Mode {
   Command,
   // Loading an image into VRAM
   ImageLoad,
+};
+
+struct Poisition {
+  GLshort x;
+  GLshort y;
 };
 
 struct GPU {
@@ -159,9 +162,6 @@ struct GPU {
   void gp0_quad_shaded_opaque();
   void gp0_triangle_shaded_opaque();
   void gp0_quad_texture_blend_opaque();
-
-  glm::vec2 pos_from_gp0(uint32_t p_val);
-  glm::vec3 col_from_gp0(uint32_t p_val);
 
   void gp1_reset(uint32_t p_val);
   void gp1_acknowledge_irq();

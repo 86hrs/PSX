@@ -85,6 +85,7 @@ add_executable(${PROJECT_NAME}
     src/renderer.cc
     src/gl_buffer.h
     src/gl_buffer.cc
+    src/structs.h
     ${IMGUI_SOURCES}
 )
 
