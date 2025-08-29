@@ -1,40 +1,26 @@
 #include "gl_buffer.h"
 #include "structs.h"
 #include <stdexcept>
-
+#include <vector>
 
 template <typename T> Buffer<T>::Buffer() {
     this->object = 0;
     this->map = nullptr;
-
+    
     glGenBuffers(1, &object);
     glBindBuffer(GL_ARRAY_BUFFER, object);
-
+    
     GLsizeiptr size = sizeof(T) * VERTEX_BUFFER_LEN;
-
-    // Allocate buffer memory with persistent mapping
-    glBufferStorage(GL_ARRAY_BUFFER, size, nullptr,
-                    GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT);
-
-    // Map the buffer
-    map = (T *)glMapBufferRange(GL_ARRAY_BUFFER, 0, size,
-                                GL_MAP_WRITE_BIT |
-                                    GL_MAP_PERSISTENT_BIT);
-
-    if (!map) {
-        throw std::runtime_error("Failed to map buffer");
-    }
-
-    for (int i = 0; i < VERTEX_BUFFER_LEN; i++) {
-        map[i] = T();
-    }
+    
+    // Use traditional buffer data allocation
+    glBufferData(GL_ARRAY_BUFFER, size, nullptr, GL_DYNAMIC_DRAW);
+    
+    // Initialize with default values using a temporary vector
+    std::vector<T> initialData(VERTEX_BUFFER_LEN, T());
+    glBufferSubData(GL_ARRAY_BUFFER, 0, size, initialData.data());
 }
 
 template <typename T> Buffer<T>::~Buffer() {
-    if (map) {
-        glBindBuffer(GL_ARRAY_BUFFER, object);
-        glUnmapBuffer(GL_ARRAY_BUFFER);
-    }
     glDeleteBuffers(1, &object);
 }
 
@@ -43,7 +29,10 @@ void Buffer<T>::set(uint32_t index, const T &value) {
     if (index < 0 || index >= VERTEX_BUFFER_LEN) {
         throw std::out_of_range("Buffer index out of range");
     }
-    map[index] = value;
+    
+    // Update immediately or mark as dirty for batch updates
+    glBindBuffer(GL_ARRAY_BUFFER, object);
+    glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(T), sizeof(T), &value);
 }
 
 template class Buffer<Color>;
