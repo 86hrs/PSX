@@ -37,17 +37,33 @@ Renderer::Renderer() {
   ImGui_ImplOpenGL3_Init("#version 410 core");
 
   this->program = new Shader("vertex.glsl", "fragment.glsl");
+  this->color_buf = new Buffer<Color>();
+  this->pos_buf = new Buffer<Position>();
 
-  GLuint vao = 0;
   glGenVertexArrays(1, &vao);
   glBindVertexArray(vao);
-  Buffer<Position> positions; 
+  this->pos_buf->bind();
   glEnableVertexAttribArray(0);
   glVertexAttribIPointer(0, 2, GL_SHORT, 0, nullptr);
-  Buffer<Color> colors;
+  this->color_buf->bind();
   glEnableVertexAttribArray(1);
   glVertexAttribIPointer(1, 3, GL_UNSIGNED_BYTE, 0, nullptr);
+  glBindVertexArray(0);
+  this->nvertices = 0;
   this->run();
+}
+
+void Renderer::push_triangle(Position positions[3], Color colors[3]) {
+  if ((this->nvertices + 3) > this->VERTEX_BUFFER_LEN) {
+    printf("Vertex attribute buffers full, forcing draw\n");
+    this->draw();
+  }
+
+  for (int i = 0; i < 3; i++) {
+    this->pos_buf->set(this->nvertices, positions[i]);
+    this->color_buf->set(this->nvertices, colors[i]);
+    this->nvertices += 1;
+  }
 }
 
 Renderer::~Renderer() {
@@ -60,10 +76,34 @@ Renderer::~Renderer() {
   glfwTerminate();
 }
 
+void Renderer::draw() {
+  this->program->use();
+  glBindVertexArray(this->vao);
+  glMemoryBarrier(GL_CLIENT_MAPPED_BUFFER_BARRIER_BIT);
+  glDrawArrays(GL_TRIANGLES, 0, static_cast<GLsizei>(nvertices));
+
+  GLsync sync = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
+
+  while (true) {
+    GLenum result =
+        glClientWaitSync(sync, GL_SYNC_FLUSH_COMMANDS_BIT, 10000000);
+
+    if (result == GL_ALREADY_SIGNALED || result == GL_CONDITION_SATISFIED) {
+      break;
+    }
+  }
+
+  glDeleteSync(sync);
+
+  nvertices = 0;
+}
+
 void Renderer::run() {
   while (!glfwWindowShouldClose(window)) {
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    this->draw();
 
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();

@@ -1,21 +1,26 @@
 #pragma once
-#include "glad.h"
-#include "GLFW/glfw3.h"
-#include "shader.h"
 #include "gl_buffer.h"
+#include "GLFW/glfw3.h"
+#include "glad.h"
+#include "shader.h"
 #include "structs.h"
 
 struct Renderer {
-    Renderer();
-    ~Renderer();
-    void run(); 
+  Renderer();
+  ~Renderer();
+  void run();
 
-    GLuint vao;
-    uint32_t nvertices;
+  static const uint32_t VERTEX_BUFFER_LEN = 64 * 1024;
 
-    // Buffer<Color> colors;
-    // Buffer<Position> positions;
-        
-    GLFWwindow* window;
-    Shader* program;
+  GLuint vao;
+  uint32_t nvertices;
+
+  Buffer<Color> *color_buf;
+  Buffer<Position> *pos_buf;
+
+  void push_triangle(Position positions[3], Color color[3]);
+  void draw();
+
+  GLFWwindow *window;
+  Shader *program;
 };

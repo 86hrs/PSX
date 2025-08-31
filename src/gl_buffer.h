@@ -17,4 +17,5 @@ struct Buffer {
 
   void set(uint32_t index, const T& value);
   GLuint id() const { return object; };
+  void bind() const { glBindBuffer(GL_ARRAY_BUFFER, object); };
 };
