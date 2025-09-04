@@ -46,20 +46,19 @@ Renderer::Renderer() {
     glBindVertexArray(vao);
     this->pos_buf->bind();
     glEnableVertexAttribArray(0);
-    glVertexAttribIPointer(0, 2, GL_SHORT, 0, nullptr);
+    glVertexAttribIPointer(0, 2, GL_SHORT, 0, (void *)0);
     this->color_buf->bind();
     glEnableVertexAttribArray(1);
-    glVertexAttribIPointer(1, 3, GL_UNSIGNED_BYTE, 0, nullptr);
+    glVertexAttribIPointer(1, 3, GL_UNSIGNED_BYTE, 0, (void *)0);
     glBindVertexArray(0);
     this->nvertices = 0;
-    this->run();
 }
 
 void Renderer::push_triangle(Position positions[3],
                              Color colors[3]) {
     if ((this->nvertices + 3) > this->VERTEX_BUFFER_LEN) {
         printf("Vertex attribute buffers full, forcing draw\n");
-        this->draw();
+        this->render_loop();
     }
 
     for (int i = 0; i < 3; i++) {
@@ -91,24 +90,24 @@ void Renderer::draw() {
     glFlush();
     nvertices = 0;
 }
-void Renderer::run() {
-    while (!glfwWindowShouldClose(window)) {
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+void Renderer::render_loop() {
+    if (glfwWindowShouldClose(window))
+        return;
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        this->draw();
+    this->draw();
 
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
 
-        ImGui::Begin("Debug Menu");
-        ImGui::End();
-        ImGui::Render();
+    ImGui::Begin("Debug Menu");
+    ImGui::End();
+    ImGui::Render();
 
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-        glfwSwapBuffers(window);
-        glfwPollEvents();
-    }
+    glfwSwapBuffers(window);
+    glfwPollEvents();
 }

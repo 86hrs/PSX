@@ -8,7 +8,7 @@
 struct Renderer {
     Renderer();
     ~Renderer();
-    void run();
+    void render_loop();
 
     static const uint32_t VERTEX_BUFFER_LEN = 64 * 1024;
 

@@ -19,5 +19,6 @@ int main(void) {
   while(true) {
     cpu->run();
   }
+
   return EXIT_SUCCESS;
 }

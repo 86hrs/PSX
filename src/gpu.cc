@@ -101,6 +101,7 @@ uint32_t GPU::status() {
 }
 
 void GPU::gp0(uint32_t p_val) {
+    this->renderer.render_loop();
     if (this->gp0_command_remaining == 0) {
         uint32_t opcode = (p_val >> 24) & 0xff;
 
@@ -188,8 +189,8 @@ void GPU::gp0(uint32_t p_val) {
     }
 }
 void GPU::gp1(uint32_t p_val) {
+    this->renderer.render_loop();
     uint32_t opcode = (p_val >> 24) & 0xff;
-
     switch (opcode) {
     case 0x02:
         this->gp1_acknowledge_irq();
@@ -283,7 +284,6 @@ void GPU::gp0_drawing_offset() {
 
     this->drawing_x_offset = (int16_t(x << 5)) >> 5;
     this->drawing_y_offset = (int16_t(y << 5)) >> 5;
-    // this->renderer.run();
 }
 
 void GPU::gp0_mask_bit_setting() {
