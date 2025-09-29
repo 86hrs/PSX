@@ -43,6 +43,7 @@ Renderer::Renderer() {
 
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
+    
     this->pos_buf->bind();
     glEnableVertexAttribArray(0);
     glVertexAttribIPointer(0, 2, GL_SHORT, 0, (void *)0);
