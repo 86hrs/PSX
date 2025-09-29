@@ -101,7 +101,6 @@ uint32_t GPU::status() {
 }
 
 void GPU::gp0(uint32_t p_val) {
-    this->renderer.render_loop();
     if (this->gp0_command_remaining == 0) {
         uint32_t opcode = (p_val >> 24) & 0xff;
 
@@ -189,7 +188,6 @@ void GPU::gp0(uint32_t p_val) {
     }
 }
 void GPU::gp1(uint32_t p_val) {
-    this->renderer.render_loop();
     uint32_t opcode = (p_val >> 24) & 0xff;
     switch (opcode) {
     case 0x02:
@@ -278,6 +276,7 @@ void GPU::gp0_drawing_area_bottom_right() {
 }
 
 void GPU::gp0_drawing_offset() {
+    this->renderer.render_loop();
     uint32_t p_val = (*this->gp0_command)[0];
     uint16_t x = uint16_t(p_val & 0x7ff);
     uint16_t y = uint16_t((p_val >> 11) & 0x7ff);

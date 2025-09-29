@@ -47,4 +47,7 @@ const Range EXPANSION_2(0x1f802000, 66);
 
 // JOYPAD
 const Range JOY_RX_DATA(0x1f801110, 1);
+
+// CDROM
+const Range CDROM(0x1f801800, 4);
 } // namespace map

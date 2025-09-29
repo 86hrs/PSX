@@ -26,7 +26,6 @@ Renderer::Renderer() {
     assert(gladLoadGLLoader((GLADloadproc)glfwGetProcAddress) &&
            "Failed to initialize GLAD\n");
     glViewport(0, 0, 800, 600);
-    glEnable(GL_DEPTH_TEST);
 
     // ImGui initialization
     IMGUI_CHECKVERSION();
@@ -84,8 +83,7 @@ void Renderer::draw() {
 
     this->program->use();
     glBindVertexArray(this->vao);
-    glDrawArrays(GL_TRIANGLES, 0,
-                 static_cast<GLsizei>(nvertices));
+    glDrawArrays(GL_TRIANGLES, 0, nvertices);
 
     glFlush();
     nvertices = 0;
@@ -93,9 +91,8 @@ void Renderer::draw() {
 void Renderer::render_loop() {
     if (glfwWindowShouldClose(window))
         return;
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
     this->draw();
 
     ImGui_ImplOpenGL3_NewFrame();
