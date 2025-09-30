@@ -311,15 +311,63 @@ void GPU::gp0_triangle_shaded_opaque() {
 }
 
 void GPU::gp0_quad_mono_opaque() {
-    printf("GP0: Draw mono opaque quad\n");
+    Position positions[4] = {
+        Position::from_gp0((*this->gp0_command)[1]),
+        Position::from_gp0((*this->gp0_command)[2]),
+        Position::from_gp0((*this->gp0_command)[3]),
+        Position::from_gp0((*this->gp0_command)[4]),
+    };
+
+    Color colors[4] = {
+        Color::from_gp0((*this->gp0_command)[0]),
+        Color::from_gp0((*this->gp0_command)[0]),
+        Color::from_gp0((*this->gp0_command)[0]),
+        Color::from_gp0((*this->gp0_command)[0]),
+    };
+
+    this->renderer.push_quad(positions, colors);
 }
 
 void GPU::gp0_quad_shaded_opaque() {
     printf("GP0: Draw shaded opaque quad\n");
+    Position positions[4] = {
+        Position::from_gp0((*this->gp0_command)[1]),
+        Position::from_gp0((*this->gp0_command)[3]),
+        Position::from_gp0((*this->gp0_command)[5]),
+        Position::from_gp0((*this->gp0_command)[7]),
+    };
+
+    Color colors[4] = {
+        Color::from_gp0((*this->gp0_command)[0]),
+        Color::from_gp0((*this->gp0_command)[2]),
+        Color::from_gp0((*this->gp0_command)[4]),
+        Color::from_gp0((*this->gp0_command)[6]),
+    };
+
+    this->renderer.push_quad(positions, colors);
 }
 
 void GPU::gp0_quad_texture_blend_opaque() {
-    printf("GP0: Draw texture blend quad\n");
+    Position positions[4] = {
+        Position::from_gp0((*this->gp0_command)[1]),
+        Position::from_gp0((*this->gp0_command)[3]),
+        Position::from_gp0((*this->gp0_command)[5]),
+        Position::from_gp0((*this->gp0_command)[7]),
+    };
+
+    Color color;
+    color.r = 0x80;
+    color.g = 0x00;
+    color.b = 0x00;
+
+    Color colors[4] = {
+        color,
+        color,
+        color,
+        color,
+    };
+
+    this->renderer.push_quad(positions, colors);
 }
 
 void GPU::gp0_draw_mode() {

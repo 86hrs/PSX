@@ -19,6 +19,7 @@ struct Renderer {
     Buffer<Position> *pos_buf;
 
     void push_triangle(Position positions[3], Color color[3]);
+    void push_quad(Position position[4], Color color[4]);
     void draw();
 
     GLFWwindow *window;

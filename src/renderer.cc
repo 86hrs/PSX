@@ -25,8 +25,7 @@ Renderer::Renderer() {
     // GLAD initialization
     assert(gladLoadGLLoader((GLADloadproc)glfwGetProcAddress) &&
            "Failed to initialize GLAD\n");
-    glViewport(0, 0, 800, 600);
-
+     
     // ImGui initialization
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
@@ -43,7 +42,7 @@ Renderer::Renderer() {
 
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
-    
+
     this->pos_buf->bind();
     glEnableVertexAttribArray(0);
     glVertexAttribIPointer(0, 2, GL_SHORT, 0, (void *)0);
@@ -62,6 +61,23 @@ void Renderer::push_triangle(Position positions[3],
     }
 
     for (int i = 0; i < 3; i++) {
+        this->pos_buf->set(this->nvertices, positions[i]);
+        this->color_buf->set(this->nvertices, colors[i]);
+        this->nvertices += 1;
+    }
+}
+
+void Renderer::push_quad(Position positions[4],
+                         Color colors[4]) {
+    if ((this->nvertices + 6) > this->VERTEX_BUFFER_LEN) {
+        this->render_loop();
+    }
+    for (int i = 0; i < 3; i++) {
+        this->pos_buf->set(this->nvertices, positions[i]);
+        this->color_buf->set(this->nvertices, colors[i]);
+        this->nvertices += 1;
+    }
+    for (int i = 1; i < 4; i++) {
         this->pos_buf->set(this->nvertices, positions[i]);
         this->color_buf->set(this->nvertices, colors[i]);
         this->nvertices += 1;
