@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.10)
 
-project(psx VERSION 1.0.0 LANGUAGES C CXX)
+project(main VERSION 1.0.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -86,13 +86,15 @@ add_executable(${PROJECT_NAME}
     src/gl_buffer.h
     src/gl_buffer.cc
     src/structs.h
+    src/cdrom.h
+    src/cdrom.cc
     ${IMGUI_SOURCES}
 )
 
 # Include directories
 target_include_directories(${PROJECT_NAME} PRIVATE 
     src
-    /opt/homebrew/Cellar/glm/1.0.1/include/
+    /opt/homebrew/Cellar/glm/1.0.2/include/
     ${IMGUI_DIR}
     ${IMGUI_DIR}/backends
     ${FREETYPE_INCLUDE_DIRS}
@@ -118,6 +120,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 set(SHADER_FILES
     ${CMAKE_SOURCE_DIR}/src/vertex.glsl
     ${CMAKE_SOURCE_DIR}/src/fragment.glsl
+    ${CMAKE_SOURCE_DIR}/src/SCPH1001.BIN
 )
 
 # Custom target for copying resources

@@ -16,7 +16,7 @@ int main(void) {
   Interconnect inter(&bios, &ram, &dma, &gpu);
   CPU *cpu = new CPU(&inter);
 
-  while(true) {
+  while(1) {
     cpu->run();
   }
 

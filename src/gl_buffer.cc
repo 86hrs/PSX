@@ -4,10 +4,11 @@
 #include <cstring>
 #include <algorithm>
 
-template <typename T>
-Buffer<T>::Buffer()
-    : dirty(false), dirty_start(VERTEX_BUFFER_LEN),
-      dirty_end(0) {
+template <typename T> Buffer<T>::Buffer() {
+    this->dirty = false;
+    this->dirty_start = VERTEX_BUFFER_LEN;
+    this->dirty_end = 0;
+
     glGenBuffers(1, &object);
     glBindBuffer(GL_ARRAY_BUFFER, object);
 

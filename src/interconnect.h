@@ -25,16 +25,14 @@ struct Interconnect {
     Dma *dma;
     GPU *gpu;
 
+    uint32_t irq_status = 0x0;
+    uint32_t irq_mask = 0x0;
+
     Interconnect(Bios *, RAM *, Dma *, GPU *);
     ~Interconnect() = default;
 
-    uint32_t load32(uint32_t);
-    uint16_t load16(uint32_t);
-    uint8_t load8(uint32_t);
-
-    void store32(uint32_t, uint32_t);
-    void store16(uint32_t, uint16_t);
-    void store8(uint32_t, uint8_t);
+        template <class T> T load(uint32_t p_addr);
+    template <class V> void store(uint32_t p_addr, V);
 
     uint32_t mask_region(uint32_t p_addr);
 

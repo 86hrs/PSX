@@ -8,14 +8,11 @@ struct RAM {
   RAM();
   ~RAM() = default;
 
-  uint32_t load32(uint32_t offset);
-  void store32(uint32_t offset, uint32_t value);
+  template <class T>
+  T load(uint32_t p_offset);
 
-  void store16(uint32_t offset, uint16_t value);
-  uint16_t load16(uint32_t offset);
-
-  void store8(uint32_t offset, uint8_t value);
-  uint8_t load8(uint32_t offset);
+  template <class T>
+  void store(uint32_t offset, T value);
 };
 
 

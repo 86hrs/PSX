@@ -6,7 +6,7 @@ uint32_t Dma::get_control() { return this->control; }
 void Dma::set_control(uint32_t p_val) { this->control = p_val; }
 
 bool Dma::get_irq() {
-    auto channel_irq =
+    bool channel_irq =
         this->channel_irq_flags & this->channel_irq_en;
     return this->force_irq || (this->irq_en && channel_irq != 0);
 }
@@ -26,15 +26,12 @@ uint32_t Dma::interrupt() {
 
 void Dma::set_interrupt(uint32_t p_val) {
     this->irq_dummy = (uint8_t)(p_val & 0x3f);
-
     this->force_irq = ((p_val >> 15) & 1) != 0;
-
     this->channel_irq_en = uint8_t((p_val >> 16) & 0x7f);
-
-    this->irq_en = ((p_val >> 23) & 1) != 0;
+    this->irq_en = ((p_val >> 23) & 1);
 
     uint8_t ack = (uint8_t)((p_val >> 24) & 0x3f);
-    this->channel_irq_flags &= !ack;
+    this->channel_irq_flags &= ~ack;
 }
 
 const Channel& Dma::get_channel(Port p_port) {

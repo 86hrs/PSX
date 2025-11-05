@@ -66,7 +66,7 @@ uint32_t GPU::status() {
     r |= (uint32_t(this->field)) << 13;
     r |= (uint32_t(this->texture_disable)) << 15;
     r |= this->hres.into_status();
-    // r |= (uint32_t(this->vres)) << 19;
+    r |= (uint32_t(this->vres)) << 19;
     r |= (uint32_t(this->vmode)) << 20;
     r |= (uint32_t(this->display_depth)) << 21;
     r |= (uint32_t(this->interlaced)) << 22;
@@ -329,7 +329,6 @@ void GPU::gp0_quad_mono_opaque() {
 }
 
 void GPU::gp0_quad_shaded_opaque() {
-    printf("GP0: Draw shaded opaque quad\n");
     Position positions[4] = {
         Position::from_gp0((*this->gp0_command)[1]),
         Position::from_gp0((*this->gp0_command)[3]),
@@ -355,17 +354,10 @@ void GPU::gp0_quad_texture_blend_opaque() {
         Position::from_gp0((*this->gp0_command)[7]),
     };
 
-    Color color;
-    color.r = 0x80;
-    color.g = 0x00;
-    color.b = 0x00;
+    Color color{0x80, 0x00, 0x00};
 
-    Color colors[4] = {
-        color,
-        color,
-        color,
-        color,
-    };
+    Color colors[4];
+    std::fill(std::begin(colors), std::end(colors), color);
 
     this->renderer.push_quad(positions, colors);
 }
@@ -483,12 +475,11 @@ void GPU::gp1_dma_direction(uint32_t p_val) {
 
     const uint32_t index = p_val & 3;
 
-    if (index < sizeof(directions)) {
-        this->dma_direction = directions[index];
-    } else {
+    if (index > sizeof(directions)) {
         printf("ERROR: Wrong gp_1_dma_direction: %d\n", index);
         std::terminate();
     }
+    this->dma_direction = directions[index];
 }
 
 void GPU::gp1_acknowledge_irq() { this->interrupt = false; }

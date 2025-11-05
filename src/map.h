@@ -30,7 +30,7 @@ const Range CACHE_CONTROL(0xfffe0130, 4);
 
 // I/O devices
 const Range DMA(0x1f801080, 0x80);
-const Range IQR_CONTROL(0x1f801070, 8);
+const Range IRQ_CONTROL(0x1f801070, 8);
 const Range GPU_GP0(0x1f801810, 4);       // GPU command port
 const Range GPU_GP1(0x1f801814, 4);       // GPU control port
 const Range GPU_STATUS(0x1f801820, 4);    // GPU status (read mirror)

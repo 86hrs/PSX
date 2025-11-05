@@ -20,7 +20,6 @@ KSEG2      LENGTH   Description
 
 
 struct CPU {
-
     uint32_t program_counter;
     uint32_t next_program_counter;
     uint32_t current_program_counter;

@@ -18,13 +18,8 @@ CPU::CPU(Interconnect *p_inter) {
     this->branch_occured = this->delay_slot = false;
     this->hi = this->lo = 0xdeadbeef;
 
-    for (uint32_t &reg : this->regs) {
-        reg = 0;
-    }
-
-    for (uint32_t &out_reg : this->out_regs) {
-        out_reg = 0;
-    }
+    memset(this->regs, 0, sizeof(this->regs));
+    memset(this->out_regs, 0, sizeof(this->out_regs));
 
     rtype_dispatch[0b000000] = &CPU::op_sll;
     rtype_dispatch[0b100101] = &CPU::op_or;
@@ -134,23 +129,23 @@ void CPU::run_next_instruction() {
 }
 
 uint32_t CPU::load32(uint32_t p_addr) {
-    return this->inter->load32(p_addr);
+    return this->inter->load<uint32_t>(p_addr);
 }
 uint16_t CPU::load16(uint32_t p_addr) {
-    return this->inter->load16(p_addr);
+    return this->inter->load<uint16_t>(p_addr);
 }
 uint8_t CPU::load8(uint32_t p_addr) {
-    return this->inter->load8(p_addr);
+    return this->inter->load<uint8_t>(p_addr);
 }
 
 void CPU::store32(uint32_t addr, uint32_t val) {
-    this->inter->store32(addr, val);
+    this->inter->store<uint32_t>(addr, val);
 }
 void CPU::store16(uint32_t addr, uint16_t val) {
-    this->inter->store16(addr, val);
+    this->inter->store<uint16_t>(addr, val);
 }
 void CPU::store8(uint32_t addr, uint8_t val) {
-    this->inter->store8(addr, val);
+    this->inter->store<uint8_t>(addr, val);
 }
 
 uint32_t CPU::get_reg(uint32_t idx) { return this->regs[idx]; }

@@ -7,7 +7,7 @@ build_all:
 	cd build && cmake .. && cmake --build . --parallel 8
 
 r:
-	cd build && cd bin && ./psx
+	cd build && cd bin && ./main
 
 all: build_all r
 

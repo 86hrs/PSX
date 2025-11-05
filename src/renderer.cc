@@ -16,7 +16,7 @@ Renderer::Renderer() {
     glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
 
     this->window =
-        glfwCreateWindow(800, 600, "PSX by *^hrs", NULL, NULL);
+        glfwCreateWindow(800, 600, "main", NULL, NULL);
     assert(window && "Window did not create");
 
     glfwMakeContextCurrent(window);
@@ -25,7 +25,7 @@ Renderer::Renderer() {
     // GLAD initialization
     assert(gladLoadGLLoader((GLADloadproc)glfwGetProcAddress) &&
            "Failed to initialize GLAD\n");
-     
+
     // ImGui initialization
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
