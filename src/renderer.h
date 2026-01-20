@@ -9,6 +9,7 @@ struct Renderer {
     Renderer();
     ~Renderer();
     void render_loop();
+    void update();
 
     static const uint32_t VERTEX_BUFFER_LEN = 64 * 1024;
 
@@ -24,4 +25,13 @@ struct Renderer {
 
     GLFWwindow *window;
     Shader *program;
+    
+    const char *vendor;
+    const char *renderer;
+
+    float deltaTime = 0.0f;
+    float lastFrame = 0.0f;
+    float previousSecond = glfwGetTime();
+    int frameCount = 0;
+    int fps = 0;
 };

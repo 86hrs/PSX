@@ -8,17 +8,19 @@
 #include <cstdlib>
 
 int main(void) {
-  Bios bios("SCPH1001.BIN");
-  RAM ram;
-  Dma dma;
-  CommmandBuffer cb;
-  GPU gpu(&cb);
-  Interconnect inter(&bios, &ram, &dma, &gpu);
-  CPU *cpu = new CPU(&inter);
+  Bios *bios = new Bios("SCPH1001.BIN");
+  RAM *ram = new RAM();
+  Dma *dma = new Dma();
+  CommmandBuffer *cb = new CommmandBuffer();
+  GPU *gpu = new GPU(cb);
+  Interconnect *inter = new Interconnect(bios, ram, dma, gpu);
+  CPU *cpu = new CPU(inter);
 
   while(1) {
     cpu->run();
   }
+
+  delete bios, ram, dma, cb, gpu, inter, cpu;
 
   return EXIT_SUCCESS;
 }

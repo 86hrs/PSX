@@ -7,6 +7,17 @@
 #include <exception>
 #include <optional>
 
+template void Interconnect::store<uint8_t>(uint32_t p_addr,
+                                           uint8_t);
+template void Interconnect::store<uint16_t>(uint32_t p_addr,
+                                            uint16_t);
+template void Interconnect::store<uint32_t>(uint32_t p_addr,
+                                            uint32_t);
+
+template uint8_t Interconnect::load<uint8_t>(uint32_t);
+template uint16_t Interconnect::load<uint16_t>(uint32_t);
+template uint32_t Interconnect::load<uint32_t>(uint32_t);
+
 Interconnect::Interconnect(Bios *p_bios, RAM *p_ram, Dma *p_dma,
                            GPU *p_gpu)
     : bios(p_bios), ram(p_ram), dma(p_dma), gpu(p_gpu) {}
@@ -497,13 +508,3 @@ template <typename T> T Interconnect::load(uint32_t p_addr) {
     return T{};
 }
 
-template void Interconnect::store<uint8_t>(uint32_t p_addr,
-                                           uint8_t);
-template void Interconnect::store<uint16_t>(uint32_t p_addr,
-                                            uint16_t);
-template void Interconnect::store<uint32_t>(uint32_t p_addr,
-                                            uint32_t);
-
-template uint8_t Interconnect::load<uint8_t>(uint32_t);
-template uint16_t Interconnect::load<uint16_t>(uint32_t);
-template uint32_t Interconnect::load<uint32_t>(uint32_t);

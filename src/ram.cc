@@ -2,6 +2,15 @@
 #include <cstdint>
 #include <cstring>
 
+template uint8_t RAM::load<uint8_t>(uint32_t);
+template uint16_t RAM::load<uint16_t>(uint32_t);
+template uint32_t RAM::load<uint32_t>(uint32_t);
+
+template void RAM::store<uint8_t>(uint32_t, uint8_t);
+template void RAM::store<uint16_t>(uint32_t, uint16_t);
+template void RAM::store<uint32_t>(uint32_t, uint32_t);
+
+
 RAM::RAM() {
     memset(this->data, 0, sizeof(data));
 }
@@ -53,11 +62,3 @@ void RAM::store(uint32_t p_offset, T p_value) {
     }
     }
 }
-
-template uint8_t RAM::load<uint8_t>(uint32_t);
-template uint16_t RAM::load<uint16_t>(uint32_t);
-template uint32_t RAM::load<uint32_t>(uint32_t);
-
-template void RAM::store<uint8_t>(uint32_t, uint8_t);
-template void RAM::store<uint16_t>(uint32_t, uint16_t);
-template void RAM::store<uint32_t>(uint32_t, uint32_t);

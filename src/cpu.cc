@@ -3,11 +3,20 @@
 #include "interconnect.h"
 #include <cstdint>
 #include <cstdlib>
-#include "r3000d.h"
+// #include "r3000d.h"
 #include <cstdio>
+#include <iterator>
 #include <stdexcept>
 
 char buf[1024];
+
+template void CPU::store<uint8_t>(uint32_t p_addr, uint8_t);
+template void CPU::store<uint16_t>(uint32_t p_addr, uint16_t);
+template void CPU::store<uint32_t>(uint32_t p_addr, uint32_t);
+
+template uint8_t CPU::load<uint8_t>(uint32_t);
+template uint16_t CPU::load<uint16_t>(uint32_t);
+template uint32_t CPU::load<uint32_t>(uint32_t);
 
 CPU::CPU(Interconnect *p_inter) {
     this->program_counter = 0xbfc00000;
@@ -102,7 +111,8 @@ void CPU::run_next_instruction() {
         return;
     }
 
-    Instruction instruction = Instruction(this->load32(pc));
+    Instruction instruction =
+        Instruction(this->load<uint32_t>(pc));
 
     // delay slot
     this->delay_slot = this->branch_occured;
@@ -128,24 +138,31 @@ void CPU::run_next_instruction() {
     this->opcode_count += 1;
 }
 
-uint32_t CPU::load32(uint32_t p_addr) {
-    return this->inter->load<uint32_t>(p_addr);
-}
-uint16_t CPU::load16(uint32_t p_addr) {
-    return this->inter->load<uint16_t>(p_addr);
-}
-uint8_t CPU::load8(uint32_t p_addr) {
-    return this->inter->load<uint8_t>(p_addr);
+template <typename T> T CPU::load(uint32_t p_addr) {
+    switch (sizeof(T)) {
+    case 4:
+        return this->inter->load<uint32_t>(p_addr);
+    case 2:
+        return this->inter->load<uint16_t>(p_addr);
+    case 1:
+        return this->inter->load<uint8_t>(p_addr);
+    default:
+        break;
+    }
 }
 
-void CPU::store32(uint32_t addr, uint32_t val) {
-    this->inter->store<uint32_t>(addr, val);
-}
-void CPU::store16(uint32_t addr, uint16_t val) {
-    this->inter->store<uint16_t>(addr, val);
-}
-void CPU::store8(uint32_t addr, uint8_t val) {
-    this->inter->store<uint8_t>(addr, val);
+template <typename T> void CPU::store(uint32_t p_addr, T p_val) {
+    switch (sizeof(T)) {
+    case 4:
+        this->inter->store<uint32_t>(p_addr, p_val);
+        break;
+    case 2:
+        this->inter->store<uint16_t>(p_addr, p_val);
+        break;
+    case 1:
+        this->inter->store<uint8_t>(p_addr, p_val);
+        break;
+    }
 }
 
 uint32_t CPU::get_reg(uint32_t idx) { return this->regs[idx]; }
@@ -191,7 +208,7 @@ void CPU::op_sw(Instruction p_instruction) {
     uint32_t v = this->get_reg(t);
 
     if (addr % 4 == 0) {
-        this->store32(addr, v);
+        this->store<uint32_t>(addr, v);
     } else {
         this->exception(Exception::StoreAddressError);
     }
@@ -206,7 +223,7 @@ void CPU::op_swl(Instruction p_instruction) {
     uint32_t v = this->get_reg(t);
 
     uint32_t aligned_addr = addr & !3;
-    uint32_t cur_mem = this->load32(aligned_addr);
+    uint32_t cur_mem = this->load<uint32_t>(aligned_addr);
 
     uint32_t mem = (uint32_t)NULL;
 
@@ -228,7 +245,7 @@ void CPU::op_swl(Instruction p_instruction) {
         break;
     }
     }
-    this->store32(aligned_addr, mem);
+    this->store<uint32_t>(aligned_addr, mem);
 }
 void CPU::op_swr(Instruction p_instruction) {
 
@@ -241,7 +258,7 @@ void CPU::op_swr(Instruction p_instruction) {
     uint32_t v = this->get_reg(t);
 
     uint32_t aligned_addr = addr & !3;
-    uint32_t cur_mem = this->load32(aligned_addr);
+    uint32_t cur_mem = this->load<uint32_t>(aligned_addr);
 
     uint32_t mem = (uint32_t)NULL;
 
@@ -263,7 +280,7 @@ void CPU::op_swr(Instruction p_instruction) {
         break;
     }
     }
-    this->store32(aligned_addr, mem);
+    this->store<uint32_t>(aligned_addr, mem);
 }
 // Store half word
 void CPU::op_sh(Instruction p_instruction) {
@@ -278,7 +295,7 @@ void CPU::op_sh(Instruction p_instruction) {
     uint32_t v = this->get_reg(t);
 
     if (addr % 2 == 0) {
-        this->store16(addr, (uint16_t)v);
+        this->store<uint16_t>(addr, (uint16_t)v);
     } else {
         this->exception(Exception::StoreAddressError);
     }
@@ -296,7 +313,7 @@ void CPU::op_sb(Instruction p_instruction) {
     uint32_t addr = this->get_reg(s) + i;
     uint32_t v = this->get_reg(t);
 
-    this->store8(addr, (uint8_t)v);
+    this->store<uint8_t>(addr, (uint8_t)v);
 }
 // Load Word
 void CPU::op_lw(Instruction p_instruction) {
@@ -311,7 +328,7 @@ void CPU::op_lw(Instruction p_instruction) {
 
     // Address must be 32bit aligned
     if (addr % 4 == 0) {
-        uint32_t v = this->load32(addr);
+        uint32_t v = this->load<uint32_t>(addr);
 
         this->load_reg = t;
         this->load_val = v;
@@ -333,7 +350,7 @@ void CPU::op_lwl(Instruction p_instruction) {
     uint32_t cur_v = this->out_regs[t];
 
     uint32_t aligned_addr = addr & !3;
-    uint32_t aligned_word = this->load32(aligned_addr);
+    uint32_t aligned_word = this->load<uint32_t>(aligned_addr);
 
     uint32_t v = (uint32_t)NULL;
 
@@ -372,7 +389,7 @@ void CPU::op_lwr(Instruction p_instruction) {
     uint32_t cur_v = this->out_regs[t];
 
     uint32_t aligned_addr = addr & !3;
-    uint32_t aligned_word = this->load32(aligned_addr);
+    uint32_t aligned_word = this->load<uint32_t>(aligned_addr);
 
     uint32_t v = (uint32_t)NULL;
 
@@ -410,7 +427,7 @@ void CPU::op_lhu(Instruction p_instruction) {
         return;
     }
 
-    uint32_t v = (uint32_t)this->load16(addr);
+    uint32_t v = (uint32_t)this->load<uint16_t>(addr);
     this->load_reg = t;
     this->load_val = v;
 }
@@ -423,7 +440,7 @@ void CPU::op_lh(Instruction p_instruction) {
     uint32_t addr = this->get_reg(s) + i;
 
     // Cast to i16
-    int16_t v = (int16_t)this->load16(addr);
+    int16_t v = (int16_t)this->load<uint16_t>(addr);
 
     this->load_reg = t;
     this->load_val = (uint32_t)v;
@@ -436,7 +453,7 @@ void CPU::op_lb(Instruction p_instruction) {
 
     uint32_t addr = this->get_reg(s) + i;
 
-    int8_t v = (int8_t)this->load8(addr);
+    int8_t v = (int8_t)this->load<uint8_t>(addr);
 
     this->load_reg = t;
     this->load_val = (uint32_t)v;
@@ -450,7 +467,7 @@ void CPU::op_lbu(Instruction p_instruction) {
 
     uint32_t addr = this->get_reg(s) + i;
 
-    uint8_t v = this->load8(addr);
+    uint8_t v = this->load<uint8_t>(addr);
 
     this->load_reg = t;
     this->load_val = (uint32_t)v;
@@ -1084,6 +1101,4 @@ void CPU::execute_instruction(Instruction p_instruction) {
     else
         this->op_illegal(p_instruction);
 }
-void CPU::run() {
-    this->run_next_instruction();
-}
+void CPU::run() { this->run_next_instruction(); }

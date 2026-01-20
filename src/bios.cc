@@ -3,6 +3,9 @@
 #include <fstream>
 #include <iostream>
 
+template uint8_t Bios::load<uint8_t>(uint32_t);
+template uint32_t Bios::load<uint32_t>(uint32_t);
+
 Bios::Bios(const char *filename) {
     std::ifstream ifs(filename,
                       std::ios::binary | std::ios::ate);
@@ -45,5 +48,3 @@ template <class T> T Bios::load(uint32_t p_offset) {
     }
 }
 
-template uint8_t Bios::load<uint8_t>(uint32_t);
-template uint32_t Bios::load<uint32_t>(uint32_t);

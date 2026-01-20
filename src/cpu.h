@@ -74,13 +74,12 @@ struct CPU {
 
     void branch(uint32_t p_offset);
 
-    uint32_t load32(uint32_t addr);
-    uint16_t load16(uint32_t addr);
-    uint8_t load8(uint32_t addr);
 
-    void store32(uint32_t addr, uint32_t val);
-    void store16(uint32_t addr, uint16_t val);
-    void store8(uint32_t addr, uint8_t val);
+    template<typename T>
+    T load(uint32_t p_addr);
+
+    template<typename T>
+    void store(uint32_t p_addr, T val);
 
     uint32_t get_reg(uint32_t idx);
     void set_reg(uint32_t idx, uint32_t val);

@@ -31,7 +31,7 @@ struct Interconnect {
     Interconnect(Bios *, RAM *, Dma *, GPU *);
     ~Interconnect() = default;
 
-        template <class T> T load(uint32_t p_addr);
+    template <class T> T load(uint32_t p_addr);
     template <class V> void store(uint32_t p_addr, V);
 
     uint32_t mask_region(uint32_t p_addr);
